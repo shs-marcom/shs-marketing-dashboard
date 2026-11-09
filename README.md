@@ -38,9 +38,12 @@ Trình duyệt (GitHub Pages)  ──►  Apps Script (API + kiểm tra key)  �
 3. Vào **Cài đặt dự án** (biểu tượng bánh răng) → tích **Hiển thị tệp kê khai "appsscript.json"** → quay lại trình soạn thảo, mở `appsscript.json`, thay bằng nội dung file [`apps-script/appsscript.json`](apps-script/appsscript.json) → **Lưu**.
 
 ### Bước 3: Khởi tạo và lấy key Chủ hệ thống
-1. Ở thanh trên trình soạn thảo, chọn hàm **`setup`** → bấm **Chạy**.
-2. Google hỏi cấp quyền → chọn tài khoản → **Nâng cao → Đi tới … (không an toàn)** → **Cho phép**. Đây là script của chính anh/chị nên bước này an toàn.
-3. Mở **Nhật ký thực thi** ở dưới cùng, tìm dòng `KEY CHỦ HỆ THỐNG …: SHS-XXXX-XXXX-XXXX-XXXX` → **lưu key này ở nơi an toàn**. Key chỉ hiện một lần.
+1. Quay lại tab **Google Sheet** → nhấn **F5** để tải lại trang. Sau vài giây, trên thanh menu xuất hiện mục **SHS Dashboard**.
+2. **SHS Dashboard → Khởi tạo / Lấy key Chủ hệ thống**.
+3. Lần đầu Google hỏi cấp quyền → chọn tài khoản → **Nâng cao → Đi tới … (không an toàn)** → **Cho phép**. Đây là script của chính anh/chị nên bước này an toàn. Sau khi cấp quyền, bấm lại menu ở bước 2.
+4. Hộp thoại hiện key dạng `SHS-XXXX-XXXX-XXXX-XXXX` → **Sao chép** → lưu ở nơi an toàn.
+
+> Bấm lại menu này khi đã có key: hệ thống hỏi có cấp **key mới** không (key cũ hết hiệu lực). Đây cũng là cách lấy lại key khi bị mất.
 
 ### Bước 4: Triển khai Web app
 1. **Triển khai → Tùy chọn triển khai mới** → bánh răng **Chọn loại → Ứng dụng web**.
@@ -83,7 +86,7 @@ Key chỉ hiện một lần khi tạo. Gửi riêng cho từng người qua kê
 
 **Quên key:** Chủ hệ thống bấm **Đặt lại key** cho người đó; key cũ hết hiệu lực ngay.
 
-**Mất key Chủ hệ thống:** mở Apps Script → chọn hàm **`taoLaiKeyChu`** → **Chạy** → đọc key mới trong Nhật ký thực thi.
+**Mất key Chủ hệ thống:** mở Google Sheet → menu **SHS Dashboard → Khởi tạo / Lấy key Chủ hệ thống** → đồng ý cấp key mới.
 
 ## Cập nhật code Apps Script về sau
 

@@ -657,12 +657,54 @@ function toNumOrNull_(v) {
 }
 
 /* =========================================================================
- * Chạy MỘT LẦN trong trình soạn thảo Apps Script
+ * Khởi tạo & key Chủ hệ thống
+ * Cách dễ nhất: mở Google Sheet → menu "SHS Dashboard" → "Khởi tạo / Lấy key Chủ hệ thống".
+ * Hoặc chạy hàm setup() trong trình soạn thảo, đọc key trong "Nhật ký thực thi".
  * ========================================================================= */
 
-/** Tạo các tab còn thiếu và key Chủ hệ thống đầu tiên. Key in ra trong "Nhật ký thực thi". */
+/** Thêm menu "SHS Dashboard" vào Google Sheet mỗi khi mở file. */
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('SHS Dashboard')
+    .addItem('Khởi tạo / Lấy key Chủ hệ thống', 'menuKeyChu')
+    .addToUi();
+}
+
+/** Menu: khởi tạo nếu chưa có, hoặc cấp lại key Chủ hệ thống — hiện key trong hộp thoại để sao chép. */
+function menuKeyChu() {
+  var ui = SpreadsheetApp.getUi();
+  var keys = readTable_(sheet_(SHEETS.keys, KEY_COLS), KEY_COLS);
+  var hasOwner = keys.some(function (k) { return isOwner_(k); });
+  var plain;
+  if (!hasOwner) {
+    plain = setup();
+  } else {
+    var ans = ui.alert('Đã có key Chủ hệ thống',
+      'Hệ thống đã có key Chủ hệ thống. Cấp key MỚI? Key cũ sẽ hết hiệu lực ngay.', ui.ButtonSet.YES_NO);
+    if (ans !== ui.Button.YES) return;
+    plain = taoLaiKeyChu();
+  }
+  if (!plain) { ui.alert('Không tạo được key. Xem Nhật ký thực thi trong Apps Script.'); return; }
+  showKeyDialog_(plain);
+}
+
+function showKeyDialog_(plain) {
+  var html = HtmlService.createHtmlOutput(
+    '<div style="font-family:Arial,sans-serif;font-size:13px;color:#22304A">' +
+    '<p style="margin:0 0 10px">Sao chép và lưu key này ở nơi an toàn. Hộp thoại đóng lại là <b>không xem lại được</b>.</p>' +
+    '<input id="k" readonly value="' + plain + '" style="width:100%;box-sizing:border-box;font:700 16px Consolas,monospace;' +
+    'padding:10px;border:2px dashed #FFB628;border-radius:8px;background:#FFF6E0;color:#0A2762;text-align:center">' +
+    '<div style="margin-top:12px;text-align:right">' +
+    '<button onclick="var k=document.getElementById(\'k\');k.select();document.execCommand(\'copy\');this.textContent=\'Đã sao chép ✓\'" ' +
+    'style="background:#F35700;color:#fff;border:0;border-radius:6px;padding:8px 16px;font-weight:700;cursor:pointer">Sao chép</button> ' +
+    '<button onclick="google.script.host.close()" style="background:#EEF1F8;color:#0A2762;border:0;border-radius:6px;padding:8px 16px;font-weight:700;cursor:pointer">Đã lưu, đóng</button>' +
+    '</div></div>').setWidth(460).setHeight(190);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Key Chủ hệ thống');
+}
+
+/** Tạo các tab còn thiếu và key Chủ hệ thống đầu tiên. Trả về key (chỉ khi vừa tạo mới). */
 function setup() {
   var ss = ss_();
+  if (!ss) throw new Error('Không tìm thấy Google Sheet. Apps Script phải được mở từ trong Google Sheet: Tiện ích mở rộng → Apps Script.');
   ss.setSpreadsheetTimeZone(TZ);
   sheet_(SHEETS.checklist, CK_COLS);
   sheet_(SHEETS.programs, CATALOG_COLS.programs);
@@ -677,8 +719,8 @@ function setup() {
   var keys = readTable_(ksh, KEY_COLS);
   var hasOwner = keys.some(function (k) { return isOwner_(k); });
   if (hasOwner) {
-    console.log('Đã có key Chủ hệ thống. Nếu mất key, chạy hàm taoLaiKeyChu().');
-    return;
+    say_('Đã có key Chủ hệ thống từ lần chạy trước. Mất key? Chạy hàm taoLaiKeyChu, hoặc dùng menu "SHS Dashboard" trên Google Sheet.');
+    return null;
   }
   var plain = generateKey_();
   var salt = Utilities.getUuid();
@@ -688,23 +730,29 @@ function setup() {
   });
   writeTable_(ksh, KEY_COLS, keys);
   log_('setup()', 'Khởi tạo hệ thống', 'Tạo key Chủ hệ thống');
-  console.log('=====================================================');
-  console.log('KEY CHỦ HỆ THỐNG (lưu lại ngay, chỉ hiện 1 lần): ' + plain);
-  console.log('=====================================================');
+  say_('KEY CHỦ HỆ THỐNG (lưu lại ngay, chỉ hiện 1 lần): ' + plain);
+  return plain;
 }
 
-/** Cấp lại key Chủ hệ thống khi bị mất. Chỉ người có quyền sửa Apps Script mới chạy được. */
+/** Cấp lại key Chủ hệ thống khi bị mất (key cũ hết hiệu lực). Trả về key mới. */
 function taoLaiKeyChu() {
   var ksh = sheet_(SHEETS.keys, KEY_COLS);
   var keys = readTable_(ksh, KEY_COLS);
   var owner = null;
   keys.forEach(function (k) { if (isOwner_(k)) owner = k; });
-  if (!owner) { setup(); return; }
+  if (!owner) return setup();
   var plain = generateKey_();
   owner.salt = Utilities.getUuid();
   owner.hash = hashKey_(owner.salt, plain);
   owner.active = 'Đang dùng';
   writeTable_(ksh, KEY_COLS, keys);
   log_('taoLaiKeyChu()', 'Cấp lại key Chủ hệ thống', '');
-  console.log('KEY CHỦ HỆ THỐNG MỚI (key cũ hết hiệu lực): ' + plain);
+  say_('KEY CHỦ HỆ THỐNG MỚI (key cũ hết hiệu lực): ' + plain);
+  return plain;
+}
+
+/** Ghi ra cả console và Logger để chắc chắn hiện trong "Nhật ký thực thi". */
+function say_(msg) {
+  console.log(msg);
+  try { Logger.log(msg); } catch (e) { }
 }
