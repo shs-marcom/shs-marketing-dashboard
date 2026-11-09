@@ -1,0 +1,8 @@
+# Không đưa dữ liệu nội bộ lên repo public
+*.xlsx
+*.xls
+*.csv
+*.json.bak
+!apps-script/appsscript.json
+.DS_Store
+node_modules/

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản trị dữ liệu Marketing</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/jsuites/jsuites.css">
+<link rel="stylesheet" href="vendor/jspreadsheet/jspreadsheet.css">
+<link rel="stylesheet" href="assets/common.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+header{background:linear-gradient(90deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header .logo-badge{background:#fff;border-radius:8px;padding:6px 12px}
+header .logo-badge img{height:30px;display:block}
+header .divider{width:1px;height:30px;background:rgba(255,255,255,.25)}
+header h1{font-size:16px;font-weight:700;margin:0}
+header .sub{font-size:11.5px;opacity:.75;margin-top:2px}
+header .spacer{flex:1}
+header a.to-dash{color:#fff;text-decoration:none;font-size:12.5px;font-weight:600;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);padding:7px 14px;border-radius:8px}
+header a.to-dash:hover{background:rgba(255,255,255,.2)}
+
+nav.tabs{display:flex;gap:2px;padding:0 24px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:0;z-index:20}
+nav.tabs button{border:0;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--gray);padding:13px 14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs button:hover{color:var(--navy)}
+nav.tabs button.on{color:var(--navy);border-bottom-color:var(--orange)}
+nav.tabs button .badge{display:inline-block;min-width:18px;padding:1px 6px;margin-left:6px;border-radius:99px;background:var(--orange);color:#fff;font-size:10.5px}
+nav.tabs .gap{flex:1}
+
+main{padding:16px 24px 40px;display:none}
+section.pane{display:none}
+section.pane.on{display:block}
+
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+.toolbar .ui-btn{padding:8px 13px}
+.toolbar .sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+.toolbar .status{margin-left:auto;font-size:12px;color:var(--gray)}
+.toolbar .status b{color:var(--navy)}
+.ui-btn.save{background:var(--orange);color:#fff}
+.ui-btn.save:disabled{background:#F7B48C;color:#fff}
+.hint{font-size:12px;color:var(--gray);margin:0 0 10px;line-height:1.55}
+.hint b{color:var(--navy)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.card h3{margin:0 0 12px;font-size:13.5px;color:var(--navy);font-weight:700}
+
+/* --- lưới jspreadsheet theo nhận diện SHS --- */
+.grid-wrap{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.jexcel_container{width:100%}
+.jexcel_content{box-shadow:none!important}
+.jexcel{font-family:'Inter',Arial,sans-serif!important;font-size:12.5px!important}
+.jexcel > thead > tr > td{background:var(--navy)!important;color:#fff!important;font-weight:600!important;border-color:#2C437F!important;padding:7px 4px!important;position:sticky}
+.jexcel > thead > tr > td.selected{background:var(--navy2)!important;color:var(--yellow)!important}
+.jexcel > tbody > tr > td:first-child{background:#F3F5FA!important;color:var(--gray)!important;font-size:11px}
+.jexcel > tbody > tr.row-dirty > td:first-child{background:var(--yellow)!important;color:var(--navy)!important;font-weight:700}
+.jexcel > tbody > tr.row-dirty > td{background:#FFFBEF}
+.jexcel > tbody > tr.row-new > td:first-child{background:var(--green)!important;color:#fff!important;font-weight:700}
+.jexcel > tbody > tr > td.cell-err{background:#FDECEC!important;box-shadow:inset 0 0 0 1.5px var(--red)}
+.jexcel > tbody > tr > td.readonly{color:#7A869A!important}
+.jexcel > thead > tr > td.jexcel_column_filter{background:#F3F5FA!important;color:var(--navy)!important;font-size:11px!important;font-weight:500!important;cursor:pointer;padding:4px 18px 4px 6px!important;position:relative;border-color:var(--line)!important}
+.jexcel > thead > tr > td.jexcel_column_filter::after{content:'▾';position:absolute;right:6px;top:50%;transform:translateY(-50%);color:var(--gray);font-size:10px}
+.jexcel > tbody > tr > td[data-x="15"],.jexcel > tbody > tr > td[data-x="16"]{white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.jexcel_filter{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);background:#FAFBFD;flex-wrap:wrap}
+.jexcel_filter input{font-family:inherit;border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:12.5px}
+.jexcel_pagination{padding:8px 10px;font-size:12px;color:var(--gray)}
+.jexcel_pagination > div:last-child > div{border-radius:6px}
+
+.err-panel{display:none;background:#FFF5F5;border:1px solid #F3C4C4;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12.5px;color:#8E2B2B;line-height:1.6}
+.err-panel.show{display:block}
+.err-panel b{color:#6E1F1F}
+.err-panel ul{margin:4px 0 0;padding-left:18px;max-height:140px;overflow:auto}
+.err-panel li a{color:#8E2B2B;cursor:pointer;text-decoration:underline}
+
+/* --- form đăng nhiều kênh --- */
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 14px}
+.form-grid .f{display:flex;flex-direction:column;gap:5px}
+.form-grid .f.w2{grid-column:span 2}
+.form-grid .f.w4{grid-column:span 4}
+.form-grid label{font-size:10.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+.form-grid label i{color:var(--red);font-style:normal}
+.form-grid input,.form-grid select,.form-grid textarea{font-family:inherit;font-size:13.5px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);width:100%}
+.form-grid textarea{min-height:64px;resize:vertical}
+.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus{outline:none;border-color:var(--navy)}
+@media(max-width:900px){.form-grid{grid-template-columns:1fr 1fr}.form-grid .f.w4{grid-column:span 2}}
+.ch-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.ch-group{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ch-group > .gh{background:var(--navy-soft);padding:8px 12px;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+.ch-chan{padding:8px 12px;border-top:1px solid var(--line)}
+.ch-chan .cn{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;color:var(--ink);margin-bottom:4px}
+.ch-chan .cn button{border:0;background:none;color:var(--orange);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:0}
+.ch-chan label{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 0;cursor:pointer;color:#3A4660}
+.ch-chan input{accent-color:var(--orange);width:15px;height:15px}
+.form-foot{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.form-foot .count{font-size:13px;color:var(--gray)}
+.form-foot .count b{color:var(--orange);font-size:16px}
+
+/* --- chuyển đổi --- */
+.drop{border:2px dashed #B9C4D8;border-radius:12px;padding:30px;text-align:center;background:#fff;transition:.15s}
+.drop.drag{border-color:var(--orange);background:#FFF7F1}
+.drop p{color:var(--gray);font-size:13px;margin:6px 0 14px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.kv div{background:var(--navy-soft);border-radius:10px;padding:10px 12px}
+.kv span{display:block;font-size:10.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px}
+.kv b{display:block;font-size:15px;color:var(--navy);margin-top:3px}
+.warn{background:#FFF7ED;border-left:3px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 14px;margin:10px 0;font-size:12.5px;line-height:1.6}
+.warn.bad{background:#FFF1F1;border-left-color:var(--red)}
+.good{background:#EEF8F2;border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:10px 14px;margin:10px 0;font-size:12.5px}
+
+/* --- bảng key / nhật ký --- */
+table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+table.tbl th{background:var(--navy);color:#fff;text-align:left;font-weight:600;padding:9px 10px;font-size:11.5px;white-space:nowrap}
+table.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.tbl tr:hover td{background:#FAFBFD}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.pill.admin{background:#FFF3D6;color:#8A5A00}
+.pill.viewer{background:#EDF0F6;color:#5A6B8C}
+.pill.owner{background:var(--navy);color:#fff}
+.pill.on{background:#E4F5EC;color:#137647}
+.pill.off{background:#FBEAEA;color:var(--red)}
+.acts-cell{display:flex;gap:6px;flex-wrap:wrap}
+.acts-cell button{border:1px solid var(--line);background:#fff;border-radius:7px;font-family:inherit;font-size:11.5px;font-weight:600;color:var(--navy);padding:5px 9px;cursor:pointer}
+.acts-cell button:hover{background:var(--navy-soft)}
+.acts-cell button.danger{color:var(--red)}
+.inline-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.inline-form .f{display:flex;flex-direction:column;gap:5px}
+.inline-form label{font-size:10.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+.inline-form input,.inline-form select{font-family:inherit;font-size:13.5px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;min-width:150px}
+.viewer-block{max-width:520px;margin:60px auto;text-align:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:30px}
+.viewer-block a{color:var(--orange);font-weight:700}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge"><img src="assets/logo.png" alt="SHS"></div>
+  <div class="divider"></div>
+  <div>
+    <h1>Quản trị dữ liệu Marketing</h1>
+    <div class="sub">Checklist truyền thông · Danh mục · Dữ liệu chuyển đổi — TT.Marcom SHS</div>
+  </div>
+  <div class="spacer"></div>
+  <a class="to-dash" href="index.html">&#8592; Về Dashboard</a>
+  <div id="userSlot"></div>
+</header>
+
+<nav class="tabs" id="tabs" style="display:none">
+  <button data-tab="checklist" class="on">Checklist truyền thông<span class="badge" id="badgeCk" style="display:none">0</span></button>
+  <button data-tab="multi">Đăng 1 nội dung nhiều kênh</button>
+  <button data-tab="programs">Danh mục chương trình</button>
+  <button data-tab="channels">Danh sách kênh</button>
+  <button data-tab="pics">PIC</button>
+  <button data-tab="conv">Dữ liệu chuyển đổi</button>
+  <span class="gap"></span>
+  <button data-tab="keys" class="owner-only" style="display:none">Key truy cập</button>
+  <button data-tab="log" class="owner-only" style="display:none">Nhật ký</button>
+</nav>
+
+<main id="main">
+
+  <!-- ============ CHECKLIST ============ -->
+  <section class="pane on" id="pane-checklist">
+    <div class="toolbar">
+      <button class="ui-btn" id="ckAdd">+ Thêm dòng</button>
+      <button class="ui-btn save" id="ckSave" disabled>Lưu thay đổi</button>
+      <button class="ui-btn" id="ckDiscard" disabled>Bỏ thay đổi</button>
+      <span class="sep"></span>
+      <button class="ui-btn" id="ckReload">&#8635; Tải lại</button>
+      <button class="ui-btn" id="ckExport">Xuất Excel</button>
+      <span class="status" id="ckStatus"></span>
+    </div>
+    <p class="hint">Thao tác như Excel: gõ trực tiếp, <b>Ctrl+C / Ctrl+V</b> dán nhiều dòng từ Excel, kéo góc ô để điền nhanh, <b>Ctrl+Z</b> hoàn tác, chuột phải để thêm/xóa dòng.
+      Cột <b>Cấp 2, Cấp 3, Kênh, Hạng mục</b> chỉ hiện lựa chọn thuộc cột cha. Dòng có thay đổi được tô vàng; bấm <b>Lưu thay đổi</b> để ghi lên hệ thống.
+      Lọc và sắp xếp chỉ áp dụng trên màn hình của bạn, không ảnh hưởng người khác.</p>
+    <div class="err-panel" id="ckErr"></div>
+    <div class="grid-wrap"><div id="gridCk"></div></div>
+  </section>
+
+  <!-- ============ ĐĂNG NHIỀU KÊNH ============ -->
+  <section class="pane" id="pane-multi">
+    <div class="card">
+      <h3>1. Nội dung</h3>
+      <div class="form-grid">
+        <div class="f"><label>Ngày đăng <i>*</i></label><input type="date" id="mDate"></div>
+        <div class="f"><label>Cấp 1 <i>*</i></label><select id="mCap1"></select></div>
+        <div class="f"><label>Cấp 2</label><select id="mCap2"></select></div>
+        <div class="f"><label>Cấp 3</label><select id="mCap3"></select></div>
+        <div class="f w4"><label>Nội dung / Thông điệp <i>*</i></label><textarea id="mContent" placeholder="Tiêu đề hoặc thông điệp chính của bài"></textarea></div>
+        <div class="f"><label>PIC <i>*</i></label><select id="mPic"></select></div>
+        <div class="f"><label>Tình trạng <i>*</i></label><select id="mStatus"></select></div>
+        <div class="f"><label>SL bài tin / mỗi hạng mục</label><input type="number" id="mQty" min="1" value="1"></div>
+        <div class="f"><label>URL (nếu có)</label><input type="url" id="mUrl" placeholder="https://…"></div>
+        <div class="f w4"><label>Ghi chú</label><input type="text" id="mNote"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>2. Chọn các kênh / hạng mục đăng</h3>
+      <div class="ch-groups" id="mChannels"></div>
+      <div class="form-foot">
+        <button class="ui-btn save" id="mSubmit" disabled>Tạo dòng &amp; lưu</button>
+        <button class="ui-btn" id="mClearCh">Bỏ chọn tất cả</button>
+        <span class="count">Sẽ tạo <b id="mCount">0</b> dòng checklist</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DANH MỤC ============ -->
+  <section class="pane" id="pane-programs">
+    <div class="toolbar">
+      <button class="ui-btn" data-cat-add="programs">+ Thêm dòng</button>
+      <button class="ui-btn save" data-cat-save="programs" disabled>Lưu danh mục</button>
+      <button class="ui-btn" data-cat-reload="programs">&#8635; Tải lại</button>
+      <span class="status" data-cat-status="programs"></span>
+    </div>
+    <p class="hint">Cây chương trình 3 cấp. Sắp xếp các dòng cùng Cấp 1 / Cấp 2 liền nhau cho dễ đọc. <b>Đổi tên</b> một giá trị ở đây không tự đổi trong các dòng checklist đã nhập.</p>
+    <div class="grid-wrap"><div id="gridPrograms"></div></div>
+  </section>
+
+  <section class="pane" id="pane-channels">
+    <div class="toolbar">
+      <button class="ui-btn" data-cat-add="channels">+ Thêm dòng</button>
+      <button class="ui-btn save" data-cat-save="channels" disabled>Lưu danh mục</button>
+      <button class="ui-btn" data-cat-reload="channels">&#8635; Tải lại</button>
+      <span class="status" data-cat-status="channels"></span>
+    </div>
+    <p class="hint">Danh sách kênh 3 cấp: Nhóm kênh → Kênh → Hạng mục. <b>Đổi tên</b> một giá trị ở đây không tự đổi trong các dòng checklist đã nhập.</p>
+    <div class="grid-wrap"><div id="gridChannels"></div></div>
+  </section>
+
+  <section class="pane" id="pane-pics">
+    <div class="toolbar">
+      <button class="ui-btn" data-cat-add="pics">+ Thêm dòng</button>
+      <button class="ui-btn save" data-cat-save="pics" disabled>Lưu danh mục</button>
+      <button class="ui-btn" data-cat-reload="pics">&#8635; Tải lại</button>
+      <span class="status" data-cat-status="pics"></span>
+    </div>
+    <p class="hint">Danh sách người / đơn vị phụ trách dùng cho cột PIC. Nên thống nhất một cách gọi cho mỗi người để thống kê theo PIC chính xác.</p>
+    <div class="grid-wrap"><div id="gridPics"></div></div>
+  </section>
+
+  <!-- ============ CHUYỂN ĐỔI ============ -->
+  <section class="pane" id="pane-conv">
+    <div class="card">
+      <h3>Dữ liệu đang dùng trên Dashboard</h3>
+      <div class="kv" id="convCurrent"></div>
+    </div>
+    <div class="card">
+      <h3>Up file CSV mới</h3>
+      <div class="drop" id="convDrop">
+        <b style="color:var(--navy)">Kéo thả file .csv vào đây</b>
+        <p>File mới sẽ <b>thay toàn bộ</b> dữ liệu chuyển đổi hiện có. Mọi người mở Dashboard sẽ thấy ngay bản mới.</p>
+        <button class="ui-btn primary" id="convPick">Chọn file .csv</button>
+        <input type="file" id="convFile" accept=".csv" hidden>
+      </div>
+      <div id="convPreview"></div>
+    </div>
+  </section>
+
+  <!-- ============ KEY ============ -->
+  <section class="pane" id="pane-keys">
+    <div class="card">
+      <h3>Tạo key mới</h3>
+      <div class="inline-form">
+        <div class="f"><label>Tên gợi nhớ</label><input id="kName" placeholder="VD: Ban TGĐ, tên Marcomer"></div>
+        <div class="f"><label>Loại</label><select id="kRole"><option value="viewer">Viewer — chỉ xem</option><option value="admin">Admin — nhập liệu</option></select></div>
+        <div class="f"><label>Key</label><select id="kMode"><option value="auto">Tự sinh (khuyến nghị)</option><option value="custom">Tự đặt</option></select></div>
+        <div class="f" id="kCustomWrap" style="display:none"><label>Key tự đặt (≥10 ký tự)</label><input id="kCustom"></div>
+        <div class="f"><label>Ghi chú</label><input id="kNote" placeholder="Không bắt buộc"></div>
+        <button class="ui-btn primary" id="kCreate">Tạo key</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Danh sách key</h3>
+      <p class="hint">Key chỉ hiển thị <b>một lần</b> khi tạo hoặc đặt lại. Quên key thì bấm <b>Đặt lại</b> để cấp key mới; key cũ hết hiệu lực ngay. <b>Khóa</b> một key sẽ đăng xuất người đang dùng key đó.</p>
+      <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Tên</th><th>Loại</th><th>Trạng thái</th><th>Tạo lúc</th><th>Dùng lần cuối</th><th>Ghi chú</th><th>Thao tác</th></tr></thead><tbody id="keyRows"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ============ NHẬT KÝ ============ -->
+  <section class="pane" id="pane-log">
+    <div class="toolbar"><button class="ui-btn" id="logReload">&#8635; Tải lại</button><span class="status">200 hoạt động gần nhất</span></div>
+    <div class="card" style="padding:0;overflow-x:auto"><table class="tbl"><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody id="logRows"></tbody></table></div>
+  </section>
+</main>
+
+<script src="assets/config.js"></script>
+<script src="assets/common.js"></script>
+<script src="vendor/jsuites/jsuites.js"></script>
+<script src="vendor/jspreadsheet/jspreadsheet.js"></script>
+<script src="vendor/sheetjs/xlsx.full.min.js"></script>
+<script src="assets/cms.js"></script>
+</body>
+</html>

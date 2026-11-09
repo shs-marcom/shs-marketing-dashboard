@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHS Marketing Dashboard</title>
+<link rel="icon" href="assets/logo.png">
+<script src="vendor/chartjs/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/common.css">
+<style>
+:root{
+  --navy:#0A2762; --navy2:#1B2F6E; --navy-soft:#EEF1F8;
+  --orange:#F35700; --yellow:#FFB628;
+  --green:#1E9E5A; --red:#D64545; --gray:#8A94A6; --line:#E3E8F0;
+  --ink:#22304A; --bg:#F5F7FB;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+
+/* ===== Header ===== */
+header{background:linear-gradient(90deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header img{height:34px;display:block}
+header .logo-badge{background:#fff;border-radius:8px;padding:6px 12px}
+header .divider{width:1px;height:34px;background:rgba(255,255,255,.25)}
+header h1{font-size:17px;font-weight:700;letter-spacing:.2px}
+header .sub{font-size:11.5px;opacity:.75;font-weight:400;margin-top:2px}
+header .spacer{flex:1}
+.file-status{font-size:11.5px;text-align:right;opacity:.9;line-height:1.5}
+.file-status b{color:var(--yellow);font-weight:600}
+a.btn{text-decoration:none;display:inline-block}
+.btn{border:0;border-radius:8px;padding:9px 14px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-orange:hover{filter:brightness(1.08)}
+.btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.btn-ghost:hover{background:rgba(255,255,255,.2)}
+.btn:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+
+/* ===== Dropzone ===== */
+#dropzone{max-width:860px;margin:50px auto;padding:0 20px}
+#dropzone .zones{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){#dropzone .zones{grid-template-columns:1fr}}
+.zone{background:#fff;border:2px dashed #B9C4D8;border-radius:16px;padding:40px 28px;text-align:center;transition:.2s}
+.zone.drag{border-color:var(--orange);background:#FFF7F1}
+.zone.loaded{border-style:solid;border-color:var(--green);background:#F4FBF7}
+.zone .icon{font-size:36px;margin-bottom:10px}
+.zone h2{color:var(--navy);font-size:16px;font-weight:700;margin-bottom:6px}
+.zone p{color:var(--gray);font-size:12.5px;margin-bottom:16px;line-height:1.6}
+.zone .loaded-name{color:var(--green);font-weight:600;font-size:12.5px;margin-top:10px}
+#dropzone .hint{font-size:12px;color:var(--gray);margin-top:16px;text-align:center}
+#dropzone .go{text-align:center;margin-top:22px}
+
+/* ===== Layout ===== */
+main{max-width:1440px;margin:0 auto;padding:20px 28px 48px;display:none}
+
+/* Filters */
+.filters{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+.filter label{display:block;font-size:10.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.filter select{font-family:inherit;font-size:13px;padding:8px 28px 8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-width:120px;cursor:pointer}
+.filter select:focus-visible{outline:2px solid var(--orange)}
+.filter input[type=date]{font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-width:138px;cursor:pointer}
+.filter input[type=date]:focus-visible{outline:2px solid var(--orange)}
+#btnReset{background:var(--navy-soft);color:var(--navy);align-self:flex-end}
+#btnReset:hover{background:#E0E6F3}
+.filters .count{margin-left:auto;align-self:center;font-size:12.5px;color:var(--gray)}
+.filters .count b{color:var(--navy);font-size:15px}
+
+/* KPI */
+.kpi-section{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.8px;margin:2px 0 8px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 17px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--navy)}
+.kpi.k-orange::before{background:var(--orange)}
+.kpi.k-yellow::before{background:var(--yellow)}
+.kpi.k-green::before{background:var(--green)}
+.kpi .label{font-size:10.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px}
+.kpi .value{font-size:25px;font-weight:800;color:var(--navy);margin-top:6px;line-height:1.1}
+.kpi .sub{font-size:11.5px;color:var(--gray);margin-top:4px}
+.delta{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px}
+.delta.up{background:#E4F5EC;color:var(--green)}
+.delta.down{background:#FBEAEA;color:var(--red)}
+.delta.na{background:#F0F2F6;color:var(--gray);font-weight:600}
+.kpi-sub{font-size:12px;font-weight:700;color:var(--navy);margin:4px 0 8px;padding-left:10px;border-left:3px solid var(--orange)}
+.kpi-sub-note{font-weight:500;color:var(--gray);font-size:11.5px}
+.info-btn{width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,.55);background:transparent;color:#fff;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:14px;cursor:pointer;line-height:1;padding:0;flex-shrink:0}
+.info-btn:hover{background:rgba(255,255,255,.18);border-color:#fff}
+.modal-bg{position:fixed;inset:0;background:rgba(8,20,45,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:36px 18px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;max-width:900px;width:100%;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.modal-head{background:var(--navy);color:#fff;padding:16px 22px;border-radius:14px 14px 0 0;display:flex;align-items:center;gap:12px;position:sticky;top:0}
+.modal-head h2{font-size:16px;font-weight:700;flex:1}
+.modal-close{background:rgba(255,255,255,.15);border:0;color:#fff;width:30px;height:30px;border-radius:8px;font-size:18px;cursor:pointer;line-height:1}
+.modal-close:hover{background:rgba(255,255,255,.3)}
+.modal-body{padding:20px 24px 26px;font-size:13px;line-height:1.65}
+.modal-body h4{font-size:13px;color:var(--navy);font-weight:700;margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--navy-soft)}
+.modal-body h4:first-child{margin-top:0}
+.modal-body p{margin-bottom:8px;color:var(--ink)}
+.modal-body table{font-size:12.5px;margin:6px 0 4px}
+.modal-body th{background:var(--navy-soft);color:var(--navy);position:static;font-size:11.5px;padding:8px 10px}
+.modal-body td{padding:8px 10px;vertical-align:top}
+.modal-body td:first-child{font-weight:600;color:var(--navy);white-space:nowrap}
+.modal-body code{background:var(--navy-soft);padding:1px 6px;border-radius:4px;font-size:12px;color:var(--navy2)}
+.warn-box{background:#FFF7ED;border-left:3px solid var(--orange);border-radius:0 8px 8px 0;padding:12px 14px;margin:10px 0;font-size:12.5px}
+/* Section collapse */
+.sec{margin-bottom:6px}
+.sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;margin:6px 0 8px;background:#fff;border:1px solid var(--line);border-left:3px solid var(--orange);border-radius:8px}
+.sec-head:hover{background:var(--navy-soft)}
+.sec-head .caret{font-size:11px;color:var(--orange);transition:transform .15s;display:inline-block}
+.sec-head.closed .caret{transform:rotate(-90deg)}
+.sec-note{font-weight:500;color:var(--gray);font-size:11.5px;text-transform:none;letter-spacing:0}
+.sec-body.hide{display:none}
+.sec-bar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}
+.sec-bar button{border:1px solid var(--line);background:#fff;color:var(--navy);font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer}
+.sec-bar button:hover{background:var(--navy-soft)}
+/* Bảng tách kênh */
+.ch-table td{font-variant-numeric:tabular-nums}
+.ch-table td:not(:first-child),.ch-table th:not(:first-child){text-align:right}
+.ch-table th.hl{background:var(--orange)}
+.ch-table td.hl{background:#FFF4EC;font-weight:700;color:var(--navy)}
+.ch-table tbody tr:hover{background:transparent}
+.ch-table td:first-child{font-weight:600;color:var(--navy)}
+.ch-table .cd{display:block;font-size:10.5px;font-weight:600;margin-top:3px}
+.ch-table .cd.up{color:var(--green)} .ch-table .cd.down{color:var(--red)} .ch-table .cd.na{color:var(--gray);font-weight:500}
+.trend-card{margin-bottom:18px}
+.trend-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;border-bottom:2px solid var(--navy-soft);padding-bottom:10px;margin-bottom:12px}
+.trend-head h3{border:0;margin:0;padding:0}
+.trend-ctrl{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;align-self:flex-end}
+.seg button{border:0;background:#fff;color:var(--navy);font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 14px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--navy);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--orange);outline-offset:-2px}
+.chart-wrap.trend{height:360px}
+.trend-series{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0 0 12px;font-size:12.5px}
+.trend-series .ts-label{font-size:10.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px}
+.trend-series label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink);user-select:none}
+.trend-series input{accent-color:var(--navy);width:15px;height:15px;cursor:pointer}
+.trend-series i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.trend-series i.ln{height:3px;width:16px;border-radius:2px}
+.trend-series label:has(input:not(:checked)){color:var(--gray)}
+.ts-all{border:0;background:none;color:var(--orange);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:2px 4px}
+.ts-all:hover{text-decoration:underline}
+.conv-empty{background:#fff;border:1px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--gray);font-size:13px;margin-bottom:16px}
+
+/* Charts */
+.charts{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-bottom:18px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card h3{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;padding-bottom:9px;border-bottom:2px solid var(--navy-soft)}
+.card .chart-wrap{position:relative;height:250px}
+.card .chart-wrap.tall{height:300px}
+.c-6{grid-column:span 6}.c-4{grid-column:span 4}.c-12{grid-column:span 12}
+@media(max-width:980px){.c-6,.c-4{grid-column:span 12}}
+.chart-note{font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5;text-align:center}
+
+/* Funnel */
+.funnel{max-width:760px;margin:6px auto;display:flex;flex-direction:column;gap:8px}
+.f-row{display:flex;align-items:center;gap:14px}
+.f-label{width:140px;font-size:12px;font-weight:600;color:var(--navy);text-align:right;flex-shrink:0}
+.f-track{flex:1;display:flex;justify-content:center}
+.f-bar{height:44px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;min-width:90px;transition:width .4s}
+.f-rate{width:150px;font-size:11.5px;color:var(--gray);flex-shrink:0}
+.f-rate b{color:var(--orange)}
+
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:var(--navy);color:#fff;font-weight:600;padding:9px 10px;text-align:left;white-space:nowrap;position:sticky;top:0;font-size:11.5px}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:hover{background:var(--navy-soft)}
+th[data-key]{cursor:pointer;user-select:none;padding-right:22px;position:sticky;top:0}
+th[data-key]:hover{background:var(--navy2)}
+th[data-key] .arrow{position:absolute;right:7px;font-size:9px;opacity:.35}
+th[data-key].sorted{background:var(--navy2)}
+th[data-key].sorted .arrow{opacity:1;color:var(--yellow);font-size:10px}
+.sort-hint{font-size:11px;color:var(--gray);font-weight:400;margin-left:8px}
+.chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
+.chip.done{background:#E4F5EC;color:#137647}
+.chip.doing{background:#FFEDE0;color:#C24600}
+.chip.plan{background:#EDF0F6;color:#5A6B8C}
+.chip.other{background:#F1F1F1;color:#666}
+td a{color:var(--orange);font-weight:600;text-decoration:none}
+td a:hover{text-decoration:underline}
+.empty-note{text-align:center;color:var(--gray);padding:30px}
+footer{max-width:1440px;margin:0 auto;padding:0 28px 30px;font-size:11px;color:var(--gray);line-height:1.6}
+
+/* ===== Điện thoại ===== */
+.table-wrap{max-width:100%}
+.card{min-width:0}
+@media(max-width:640px){
+  header{padding:12px 16px;gap:10px}
+  main{padding:14px 16px 40px}
+  footer{padding:0 16px 24px}
+  .filters{padding:12px}
+  .filters .filter{flex:1 1 calc(50% - 8px);min-width:0}
+  .filter select,.filter input[type=date]{min-width:0;width:100%}
+  .filters .count{margin-left:0;width:100%}
+  .trend-ctrl{width:100%}
+  .file-status{text-align:left}
+  .f-row{gap:8px}
+  .f-label{width:72px;font-size:11px}
+  .f-rate{width:88px;font-size:10.5px}
+  .f-bar{min-width:54px;font-size:12px;height:38px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge"><img src="assets/logo.png" alt="SHS"></div>
+  <div class="divider"></div>
+  <div>
+    <h1>Marketing Dashboard</h1>
+    <div class="sub">Checklist truyền thông &amp; Chuyển đổi – TT.Marcom SHS</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="file-status" id="fileStatus" style="display:none">
+    Checklist: <b id="fnCheck">—</b><br>Chuyển đổi: <b id="fnConv">—</b>
+  </div>
+  <button class="info-btn" id="btnInfo" title="Mô tả dashboard &amp; định nghĩa dữ liệu">i</button>
+  <button class="btn btn-orange" id="btnRefresh" title="Tải lại dữ liệu mới nhất từ hệ thống">&#8635; Làm mới dữ liệu</button>
+  <a class="btn btn-ghost" id="btnCms" href="cms.html" style="display:none">Quản trị dữ liệu</a>
+  <div id="userSlot"></div>
+</header>
+
+<main id="app">
+  <div class="sec-bar"><button id="secCollapseAll">Thu gọn tất cả</button><button id="secExpandAll">Mở tất cả</button></div>
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter"><label>Từ ngày</label><input type="date" id="fFrom"></div>
+    <div class="filter"><label>Đến ngày</label><input type="date" id="fTo"></div>
+    <div class="filter"><label>Cấp 1 (Loại)</label><select id="fCap1"></select></div>
+    <div class="filter"><label>Cấp 2 (Nhóm)</label><select id="fCap2"></select></div>
+    <div class="filter"><label>Cấp 3 (SPDV/CT)</label><select id="fCap3"></select></div>
+    <div class="filter"><label>Kênh</label><select id="fChannel"></select></div>
+    <div class="filter"><label>PIC</label><select id="fPic"></select></div>
+    <div class="filter"><label>Tình trạng</label><select id="fStatus"></select></div>
+    <button class="btn" id="btnReset">Xóa lọc</button>
+    <div class="count"><b id="cntRows">0</b> dòng hiển thị</div>
+  </div>
+
+  <!-- KPI dòng 1: Truyền thông -->
+  <div class="sec">
+   <div class="sec-head" data-sec="bodyComm"><span class="caret">▾</span>Truyền thông (Checklist)</div>
+   <div class="sec-body" id="bodyComm">
+  <div class="kpis">
+    <div class="kpi"><div class="label">Tổng bài / tin</div><div class="value" id="kTotal">0</div><div class="sub" id="kItems"></div></div>
+    <div class="kpi k-green"><div class="label">Hoàn thành</div><div class="value" id="kDone">0</div><div class="sub" id="kDonePct"></div></div>
+    <div class="kpi k-orange"><div class="label">Đang thực hiện</div><div class="value" id="kDoing">0</div></div>
+    <div class="kpi k-yellow"><div class="label">Kế hoạch / khác</div><div class="value" id="kPlan">0</div></div>
+    <div class="kpi"><div class="label">Hiển thị</div><div class="value" id="kView">0</div><div class="delta na" id="dView">N/A</div></div>
+    <div class="kpi"><div class="label">Tương tác</div><div class="value" id="kEng">0</div><div class="delta na" id="dEng">N/A</div></div>
+  </div>
+
+   </div>
+  </div>
+
+  <!-- KPI dòng 2: Chuyển đổi -->
+  <div class="sec">
+   <div class="sec-head" data-sec="bodyConv"><span class="caret">▾</span>Chuyển đổi — Tài khoản &amp; quy mô toàn SHS <span class="sec-note">— nguồn: dữ liệu chuyển đổi</span></div>
+   <div class="sec-body" id="bodyConv">
+  <div class="conv-empty" id="convEmpty" style="display:none">Chưa có dữ liệu chuyển đổi. Admin up file CSV tại trang <a href="cms.html">Quản trị dữ liệu</a> → tab Dữ liệu chuyển đổi.</div>
+  <div id="convKpis">
+    <div class="kpi-sub">A. Khách hàng mới <span class="kpi-sub-note">— trọng tâm: tiền/NAV thực tế nộp vào</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="label">Tổng TK mở mới</div><div class="value" id="kAcc">0</div><div class="delta na" id="dAcc">N/A</div></div>
+      <div class="kpi k-green"><div class="label">TK đã kích hoạt</div><div class="value" id="kAct">0</div><div class="delta na" id="dAct">N/A</div></div>
+      <div class="kpi k-green"><div class="label">TK đã nộp tiền</div><div class="value" id="kAccPaid">0</div><div class="delta na" id="dAccPaid">N/A</div></div>
+      <div class="kpi k-orange"><div class="label">NAV KH mới phát sinh (trong kỳ)</div><div class="value" id="kNavNew">—</div><div class="sub" id="sNavNew"></div><div class="delta na" id="dNavNew">N/A</div></div>
+      <div class="kpi k-yellow"><div class="label">NAV BQ / TK nộp tiền</div><div class="value" id="kNavPerAcc">—</div><div class="sub">trong kỳ</div></div>
+    </div>
+
+    <div class="kpi-sub">B. Khách hàng hiện hữu &amp; quy mô <span class="kpi-sub-note">— trọng tâm: NAV active/reactive</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="label">Tổng NAV (cuối kỳ)</div><div class="value" id="kNav">—</div><div class="sub" id="sNav"></div><div class="delta na" id="dNav">N/A</div></div>
+      <div class="kpi k-orange"><div class="label">Tổng dư nợ (cuối kỳ)</div><div class="value" id="kDebt">—</div><div class="sub" id="sDebt"></div><div class="delta na" id="dDebt">N/A</div></div>
+      <div class="kpi k-yellow"><div class="label">Tăng giảm NAV trong kỳ</div><div class="value" id="kNavDelta">—</div><div class="sub" id="sNavDelta"></div></div>
+    </div>
+  </div>
+
+   </div>
+  </div>
+
+  <!-- Tách theo kênh -->
+  <div class="sec" id="secChannel" style="display:none">
+    <div class="sec-head" data-sec="bodyChannel"><span class="caret">▾</span>C. Tách theo kênh mở tài khoản <span class="sec-note">— đóng góp của kênh Online &amp; Marketing so với toàn SHS</span></div>
+    <div class="sec-body" id="bodyChannel">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="ch-table">
+            <thead><tr>
+              <th>Chỉ tiêu</th>
+              <th class="hl">Online &amp; Marketing</th>
+              <th>Tư vấn đầu tư</th>
+              <th>Quầy</th>
+              <th>Tổng toàn SHS</th>
+              <th class="hl">% Online &amp; MKT</th>
+            </tr></thead>
+            <tbody id="chTbody"></tbody>
+          </table>
+        </div>
+        <div class="chart-note" id="chNote"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart xu hướng chuyển đổi -->
+  <div class="sec">
+   <div class="sec-head" data-sec="bodyTrend"><span class="caret">▾</span>Xu hướng chuyển đổi</div>
+   <div class="sec-body" id="bodyTrend">
+  <div class="card trend-card" id="trendCard">
+    <div class="trend-head">
+      <h3>Xu hướng chuyển đổi — tài khoản mới &amp; NAV</h3>
+      <div class="trend-ctrl">
+        <div class="filter"><label>Độ chi tiết</label>
+          <div class="seg" id="trendSeg" role="group" aria-label="Độ chi tiết">
+            <button data-g="day" class="on">Ngày</button><button data-g="week">Tuần</button><button data-g="month">Tháng</button>
+          </div>
+        </div>
+        <div class="filter"><label>Kỳ gần nhất</label>
+          <div class="seg" id="trendQuick" role="group" aria-label="Chọn nhanh số kỳ">
+            <button data-n="7">7</button><button data-n="10">10</button><button data-n="30">30</button><button data-n="def" class="on" title="30 ngày / 12 tuần / 12 tháng gần nhất">Mặc định</button>
+          </div>
+        </div>
+        <div class="filter"><label>Từ</label><input type="date" id="tFrom"></div>
+        <div class="filter"><label>Đến</label><input type="date" id="tTo"></div>
+      </div>
+    </div>
+    <div class="trend-series" id="trendSeries">
+      <span class="ts-label">Hiển thị:</span>
+      <label><input type="checkbox" data-s="mkt" checked><i style="background:#F35700"></i>TK Online &amp; MKT</label>
+      <label><input type="checkbox" data-s="tvdt" checked><i style="background:#0A2762"></i>TK Tư vấn đầu tư</label>
+      <label><input type="checkbox" data-s="other" checked><i style="background:#C9D3E8"></i>TK nguồn khác</label>
+      <label><input type="checkbox" data-s="navNew" checked><i class="ln" style="background:#D99A00"></i>NAV KH mới phát sinh</label>
+      <label id="lblNavMkt"><input type="checkbox" data-s="navMkt"><i class="ln" style="background:#F35700"></i>NAV KH mới — Online &amp; MKT</label>
+      <label><input type="checkbox" data-s="nav" checked><i class="ln" style="background:#1E9E5A"></i>Tổng NAV cuối kỳ</label>
+      <button class="ts-all" id="tsAll" type="button">Chọn tất cả</button>
+    </div>
+    <div class="chart-wrap trend"><canvas id="chTrend"></canvas></div>
+    <div class="empty-note" id="trendEmpty" style="display:none">Chưa nạp file dữ liệu chuyển đổi (.csv).</div>
+    <div class="chart-note" id="trendNote"></div>
+  </div>
+
+  <div class="card trend-card" id="mktCard" style="display:none">
+    <h3>Tài khoản mới từ kênh Online &amp; Marketing <span class="sec-note">— dùng chung độ chi tiết và khoảng thời gian ở trên</span></h3>
+    <div class="chart-wrap trend"><canvas id="chMkt"></canvas></div>
+    <div class="chart-note" id="mktNote"></div>
+  </div>
+
+   </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="sec">
+   <div class="sec-head" data-sec="bodyCharts"><span class="caret">▾</span>Biểu đồ truyền thông &amp; Funnel</div>
+   <div class="sec-body" id="bodyCharts">
+  <div class="charts">
+    <div class="card c-6"><h3>Số bài / tin theo tuần &times; tình trạng</h3><div class="chart-wrap"><canvas id="chWeek"></canvas></div></div>
+    <div class="card c-6"><h3>Cơ cấu theo Loại chương trình (Cấp 1)</h3><div class="chart-wrap"><canvas id="chCap1"></canvas></div></div>
+    <div class="card c-4"><h3>Theo nhóm kênh</h3><div class="chart-wrap"><canvas id="chGroup"></canvas></div></div>
+    <div class="card c-4"><h3>Theo kênh (Top 10)</h3><div class="chart-wrap"><canvas id="chChannel"></canvas></div></div>
+    <div class="card c-4"><h3>Top 10 nội dung (Cấp 3) — SL bài tin</h3><div class="chart-wrap"><canvas id="chCap3"></canvas></div></div>
+
+    <div class="card c-12">
+      <h3>Funnel hiệu quả: Hiển thị &rarr; Tương tác &rarr; TK mở mới &rarr; TK mở mới Online</h3>
+      <div id="funnel" class="funnel"></div>
+      <div class="chart-note"><b>Định nghĩa:</b> <b>TK mở mới</b> = tổng tài khoản mở mới toàn SHS trong kỳ; <b>TK mở mới Online</b> = tài khoản mở mới từ kênh Online &amp; Marketing (nguồn: file dữ liệu chuyển đổi). Đây là số toàn công ty, chưa attribution theo từng hoạt động Marketing; Hiển thị &amp; Tương tác lấy từ Checklist truyền thông.</div>
+    </div>
+
+  </div>
+
+   </div>
+  </div>
+
+  <!-- Table -->
+  <div class="sec">
+   <div class="sec-head" data-sec="bodyTable"><span class="caret">▾</span>Chi tiết checklist</div>
+   <div class="sec-body" id="bodyTable">
+  <div class="card c-12">
+    <h3>Chi tiết checklist (<span id="cntTable">0</span> dòng)<span class="sort-hint">Bấm tên cột để sắp xếp — mặc định: Ngày đăng cũ &rarr; mới</span></h3>
+    <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+      <table>
+        <thead><tr id="thead">
+          <th data-key="date" data-type="date">Ngày đăng</th>
+          <th data-key="week" data-type="num">Tuần</th>
+          <th data-key="cap1" data-type="text">Cấp 1</th>
+          <th data-key="cap2" data-type="text">Cấp 2</th>
+          <th data-key="cap3" data-type="text">Cấp 3 (SPDV/CT)</th>
+          <th data-key="group" data-type="text">Nhóm kênh</th>
+          <th data-key="channel" data-type="text">Kênh</th>
+          <th data-key="item" data-type="text">Hạng mục</th>
+          <th data-key="content" data-type="text">Nội dung / Thông điệp</th>
+          <th data-key="pic" data-type="text">PIC</th>
+          <th data-key="qty" data-type="num">SL</th>
+          <th data-key="status" data-type="text">Tình trạng</th>
+          <th data-key="views" data-type="num">Hiển thị</th>
+          <th data-key="eng" data-type="num">Tương tác</th>
+          <th>Link</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty-note" id="emptyNote" style="display:none">Không có dữ liệu khớp bộ lọc.</div>
+    </div>
+  </div>
+   </div>
+  </div>
+</main>
+
+<!-- Modal mô tả -->
+<div class="modal-bg" id="infoModal">
+ <div class="modal">
+  <div class="modal-head">
+    <h2>Mô tả Dashboard &amp; định nghĩa trường dữ liệu</h2>
+    <button class="modal-close" id="btnCloseInfo" aria-label="Đóng">&times;</button>
+  </div>
+  <div class="modal-body">
+
+    <h4>0. Thu gọn khối</h4>
+    <p>Mỗi khối có tiêu đề bấm được để thu gọn hoặc mở lại (mũi tên ▾ bên trái). Hai nút <b>Thu gọn tất cả</b> / <b>Mở tất cả</b> ở góc trên phải vùng nội dung. Trạng thái thu gọn không lưu lại sau khi đóng trình duyệt.</p>
+
+    <h4>1. Dashboard này là gì</h4>
+    <p>Công cụ theo dõi hoạt động truyền thông của TT.Marcom SHS đặt cạnh kết quả chuyển đổi (tài khoản mở mới, NAV, dư nợ) của toàn công ty. Dữ liệu do TT.Marcom nhập và quản lý tập trung; chỉ người có key truy cập mới xem được.</p>
+
+    <h4>2. Hai nguồn dữ liệu</h4>
+    <table>
+      <tr><th style="width:190px">Nguồn</th><th>Nội dung</th></tr>
+      <tr><td>Checklist truyền thông</td><td>Do Marcomer nhập trên trang Quản trị dữ liệu (bảng nhập kiểu Excel). Cung cấp: số bài/tin, phân loại Cấp 1–3, kênh, PIC, tình trạng, hiển thị, tương tác.</td></tr>
+      <tr><td>Dữ liệu chuyển đổi</td><td>Admin up file CSV tại trang Quản trị dữ liệu; Dashboard luôn hiển thị bản up gần nhất (tên file, người up, thời điểm ở góc trên). Theo ngày làm việc. Cung cấp: tài khoản mở mới theo kênh, TK kích hoạt, TK nộp tiền, tổng dư nợ, tổng NAV, NAV của KH mới.</td></tr>
+    </table>
+
+    <h4>3. Bộ lọc</h4>
+    <p><b>Từ ngày – Đến ngày</b> tác động lên <u>cả hai</u> nguồn. Các bộ lọc nội dung (Cấp 1, Cấp 2, Cấp 3, Kênh, PIC, Tình trạng) <u>chỉ</u> tác động lên dữ liệu truyền thông — vì file chuyển đổi không có chiều nội dung. Các dropdown liên kết nhau: chọn Cấp 1 thì Cấp 2/Cấp 3 chỉ hiện giá trị thuộc Cấp 1 đó.</p>
+
+    <h4>4. Định nghĩa chỉ tiêu truyền thông</h4>
+    <table>
+      <tr><th style="width:190px">Chỉ tiêu</th><th>Định nghĩa</th></tr>
+      <tr><td>Tổng bài / tin</td><td>Tổng cột "SL bài tin" của các dòng thỏa bộ lọc.</td></tr>
+      <tr><td>Hoàn thành / Đang thực hiện / Kế hoạch</td><td>Tổng SL bài tin theo từng trạng thái. "Kế hoạch / khác" gồm cả các trạng thái không thuộc 2 nhóm trên.</td></tr>
+      <tr><td>Hiển thị</td><td>Tổng lượt hiển thị (impressions/reach) khai báo trong checklist.</td></tr>
+      <tr><td>Tương tác</td><td>Tổng lượt tương tác (engagement) khai báo trong checklist.</td></tr>
+    </table>
+
+    <h4>5. Định nghĩa chỉ tiêu chuyển đổi</h4>
+    <p><b>Nhóm A — Khách hàng mới</b> (trọng tâm: tiền/NAV thực tế nộp vào)</p>
+    <table>
+      <tr><th style="width:190px">Chỉ tiêu</th><th>Định nghĩa &amp; cách tính</th></tr>
+      <tr><td>Tổng TK mở mới</td><td>Cộng dồn số TK mở mới trong kỳ (toàn SHS).</td></tr>
+      <tr><td>TK Online &amp; Marketing</td><td>Cộng dồn TK mở mới qua kênh Online (MKT).</td></tr>
+      <tr><td>TK Tư vấn đầu tư</td><td>Cộng dồn TK mở mới qua kênh TVĐT.</td></tr>
+      <tr><td>TK đã kích hoạt</td><td>Cộng dồn TK đã kích hoạt trong kỳ.</td></tr>
+      <tr><td>TK đã nộp tiền</td><td>Cộng dồn TK đã nộp tiền giao dịch trong kỳ.</td></tr>
+      <tr><td>NAV KH mới phát sinh (trong kỳ)</td><td><b>Cộng dồn</b> cột "Tổng NAV của KH mới" của tất cả các ngày trong kỳ. Cột này là giá trị <u>phát sinh theo ngày</u> (trung vị khoảng 10 triệu đ/ngày, có ngày âm), không phải số dư lũy kế — nên phải cộng dồn thì con số mới thay đổi theo độ dài kỳ lọc. Dòng phụ hiển thị số ngày cộng dồn, tỷ trọng so với NAV toàn SHS, và cảnh báo ⚠ nếu kỳ chứa ngày có giá trị lệch trên 100 lần trung vị.</td></tr>
+      <tr><td>NAV BQ / TK nộp tiền</td><td><code>NAV KH mới phát sinh trong kỳ ÷ số TK đã nộp tiền trong kỳ</code>. Chỉ tiêu tham chiếu về chất lượng tài khoản mới.</td></tr>
+    </table>
+
+    <p style="margin-top:14px"><b>Nhóm B — Khách hàng hiện hữu &amp; quy mô</b> (trọng tâm: NAV active/reactive)</p>
+    <table>
+      <tr><th style="width:190px">Chỉ tiêu</th><th>Định nghĩa &amp; cách tính</th></tr>
+      <tr><td>Tổng NAV (cuối kỳ)</td><td>NAV = Tổng tài sản − nghĩa vụ nợ, toàn SHS, lấy tại ngày cuối cùng có dữ liệu trong kỳ.</td></tr>
+      <tr><td>Tổng dư nợ (cuối kỳ)</td><td>Tổng dư nợ margin toàn SHS tại ngày cuối cùng có dữ liệu trong kỳ.</td></tr>
+      <tr><td>&Delta; NAV trong kỳ</td><td><code>NAV ngày cuối kỳ − NAV ngày đầu kỳ</code>. Là toàn bộ biến động NAV của công ty trong kỳ.</td></tr>
+      <tr><td>&Delta; NAV KH hiện hữu (trong kỳ)</td><td><code>Δ NAV trong kỳ − NAV KH mới phát sinh trong kỳ</code>. Phần biến động NAV không đến từ khách hàng mới; <b>gồm cả</b> dòng tiền nộp/rút ròng của khách hàng cũ <b>và</b> lãi/lỗ do biến động giá chứng khoán — xem mục 9.b.</td></tr>
+    </table>
+
+    <h4>6. Quy tắc "cuối kỳ" và so sánh %</h4>
+    <p>NAV và dư nợ là <b>số dư tại thời điểm</b>, không phải phát sinh — nên dashboard lấy giá trị <b>ngày cuối cùng có dữ liệu</b> trong khoảng lọc (ngày cụ thể hiển thị ngay dưới con số), không cộng dồn. Các chỉ tiêu tài khoản là phát sinh nên được cộng dồn.</p>
+    <p>Ô <b>% so sánh</b> đối chiếu với kỳ liền trước cùng độ dài: nếu lọc 01–15/07 thì so với 16–30/06. Nếu không chọn khoảng ngày, mặc định lấy 30 ngày gần nhất so với 30 ngày liền trước. Tăng hiện <span style="color:var(--green);font-weight:700">▲ xanh</span>, giảm hiện <span style="color:var(--red);font-weight:700">▼ đỏ</span>, không đủ dữ liệu hiện <span style="color:var(--gray);font-weight:700">N/A</span>. Với NAV và dư nợ, phép so sánh là số dư ngày cuối kỳ này với số dư ngày cuối kỳ trước.</p>
+
+    <h4>7. Funnel hiệu quả</h4>
+    <p>Bốn tầng: Hiển thị → Tương tác → TK mở mới → TK mở mới Online. Tỷ lệ giữa các tầng chỉ mang tính tham chiếu quy mô, <b>không phải tỷ lệ chuyển đổi theo dấu vết người dùng</b>: Hiển thị/Tương tác lấy từ checklist truyền thông, còn TK mở mới là số toàn công ty.</p>
+
+    <h4>7b. Bảng "Tách theo kênh mở tài khoản"</h4>
+    <p>Chỉ hiện khi file dữ liệu có các cột tách kênh (NAV TVĐT / NAV Online MKT / NAV Quầy và SLKH nộp tiền theo kênh). Cộng dồn theo khoảng ngày ở bộ lọc chung. Cột <b>Online &amp; Marketing</b> và <b>% Online &amp; MKT</b> được tô nổi vì đây là phần đóng góp trực tiếp của TT.Marcom. "Tỷ lệ nộp tiền / mở mới" là số TK nộp tiền chia số TK mở mới của cùng kênh trong kỳ. NAV theo kênh là NAV của <u>khách hàng mới</u> mở qua kênh đó, không phải NAV toàn danh mục.</p>
+
+    <h4>8. Biểu đồ "Xu hướng chuyển đổi — tài khoản mới &amp; NAV"</h4>
+    <p>Mục đích: nhìn nhanh xu hướng chuyển đổi. Chọn độ chi tiết <b>Ngày / Tuần / Tháng</b>; mặc định hiển thị 30 ngày / 12 tuần / 12 tháng gần nhất tính đến ngày có dữ liệu mới nhất. Chọn nhanh <b>7 / 10 / 30 kỳ gần nhất</b> (kỳ = ngày, tuần hoặc tháng theo độ chi tiết; tính theo kỳ <u>có dữ liệu</u>, nên chọn 7 là đúng 7 cột trên chart), hoặc tự chọn khoảng Từ–Đến. Dòng <b>Hiển thị</b> cho phép tích chọn từng thông số; bấm vào chú thích dưới chart cũng bật/tắt được. Trục nào không còn thông số hiển thị sẽ tự ẩn. Chart có range riêng, <u>không</u> chịu tác động của bộ lọc chung.</p>
+    <table>
+      <tr><th style="width:190px">Thành phần</th><th>Cách tính</th></tr>
+      <tr><td>Cột xếp chồng</td><td>TK mở mới của kỳ, chia 3 cấu phần: Online &amp; Marketing (dưới cùng), Tư vấn đầu tư, Nguồn khác (= Tổng − Online − TVĐT, hiện tại chính là kênh Quầy).</td></tr>
+      <tr><td>Đường NAV KH mới</td><td>Cộng dồn NAV KH mới phát sinh trong kỳ. Trục phải riêng, đơn vị tự chọn triệu/tỷ đồng theo độ lớn.</td></tr>
+      <tr><td>Đường Tổng NAV</td><td>Tổng NAV toàn SHS tại ngày cuối có dữ liệu của từng kỳ, đơn vị nghìn tỷ đồng, trục riêng không bắt đầu từ 0.</td></tr>
+    </table>
+    <p>Tuần tính từ thứ Hai, nhãn theo số tuần ISO kèm ngày đầu tuần. Rê chuột để xem giá trị thực.</p>
+
+    <h4>8b. Biểu đồ "Tài khoản mới từ kênh Online &amp; Marketing"</h4>
+    <p>Dùng chung độ chi tiết và khoảng thời gian với biểu đồ xu hướng phía trên. Gồm 3 thông số: <b>cột</b> số TK mở mới qua Online &amp; MKT; <b>đường navy</b> tỷ lệ nộp tiền của kênh (số TK nộp tiền ÷ số TK mở mới trong kỳ); <b>đường xanh nét đứt</b> NAV mới bình quân trên một TK mới của kênh (NAV Online &amp; MKT ÷ tổng TK mở mới của kênh, gồm cả TK chưa nộp tiền). Ba trục riêng, mỗi trục cùng màu với thông số của nó.</p>
+
+    <h4>9. Giới hạn cần lưu ý khi sử dụng</h4>
+    <div class="warn-box">
+      <b>a. Chưa có attribution.</b> Số tài khoản mở mới và NAV là kết quả toàn SHS, chưa gắn được với từng hoạt động Marketing đơn lẻ. Không diễn giải quan hệ trên biểu đồ theo ngày thành quan hệ nhân quả.<br><br>
+      <b>b. ΔNAV của KH hiện hữu chưa tách được nguồn gốc.</b> Phần này gồm <u>cả</u> dòng tiền nộp/rút ròng của khách hàng cũ <u>và</u> lãi/lỗ do biến động giá chứng khoán. Muốn tách đúng, file dữ liệu cần bổ sung 2 cột: (1) tiền nộp ròng của KH hiện hữu theo ngày; (2) VN-Index đóng cửa theo ngày.<br><br>
+      <b>b2. Vì sao không hiển thị "NAV KH hiện hữu" theo số dư.</b> NAV KH mới ở quy mô hàng chục triệu đồng/ngày, bằng khoảng 0,00001% NAV toàn SHS (hàng chục nghìn tỷ). Phép trừ <code>Tổng NAV − NAV KH mới</code> theo số dư cho kết quả gần như trùng khít Tổng NAV ở mọi khoảng thời gian, không mang thêm thông tin. Dashboard vì vậy dùng chỉ tiêu <b>Δ NAV KH hiện hữu trong kỳ</b> — có ý nghĩa quản trị hơn và thay đổi thực sự theo kỳ lọc.<br><br>
+      <b>c. Kiểm tra chất lượng cột NAV KH mới.</b> Trong dữ liệu tháng 6–9/2026 có một số ngày giá trị âm và vài ngày lệch 3–4 bậc so với mặt bằng chung. Nên đối chiếu với đơn vị cung cấp trước khi đưa số vào báo cáo trình lãnh đạo.<br><br>
+      <b>d. Chỉ có ngày làm việc.</b> Dữ liệu chuyển đổi không có ngày nghỉ; dashboard không nội suy, để trống.
+    </div>
+
+    <h4>10. Cập nhật dữ liệu</h4>
+    <p><b>Checklist:</b> Marcomer có key Admin nhập/sửa trên trang <b>Quản trị dữ liệu</b> (nút góc trên, chỉ hiện với key Admin). <b>Dữ liệu chuyển đổi:</b> Admin up file CSV mới tại tab "Dữ liệu chuyển đổi"; file mới thay toàn bộ bản cũ. Người xem bấm <b>"Làm mới dữ liệu"</b> để lấy bản mới nhất. Giữ nguyên tên cột trong file CSV để hệ thống nhận diện đúng.</p>
+
+  </div>
+ </div>
+</div>
+
+<footer>Dữ liệu do TT.Marcom quản lý trên hệ thống nội bộ; chỉ người có key truy cập mới xem được. Bấm "Làm mới dữ liệu" để lấy bản mới nhất. So sánh %: theo kỳ liền trước cùng độ dài (nếu không chọn khoảng ngày: 30 ngày gần nhất vs 30 ngày trước đó); N/A khi kỳ trước không có dữ liệu. Bộ lọc nội dung (Cấp 1–3, Kênh, PIC, Tình trạng) không tác động số chuyển đổi — chuyển đổi chỉ lọc theo khoảng ngày.</footer>
+
+<script src="assets/config.js"></script>
+<script src="assets/common.js"></script>
+<script>
+/* ================= State ================= */
+let rows = [];       // checklist
+let convRows = [];   // conversion csv
+let handleCheck = null, handleConv = null;
+let hasDebtNav = false, hasNavNew = false, hasChannelSplit = false;
+let charts = {};
+
+const COLORS = {
+  navy:'#0A2762', navy2:'#1B2F6E', orange:'#F35700', yellow:'#FFB628',
+  green:'#1E9E5A', gray:'#94A3B8',
+  series:['#0A2762','#F35700','#FFB628','#1B2F6E','#6B7FB8','#F58A4B','#C9D3E8','#8A94A6']
+};
+const STATUS_META = {
+  'Hoàn thành':    {cls:'done',  color:COLORS.green},
+  'Đang thực hiện':{cls:'doing', color:COLORS.orange},
+  'Kế hoạch':      {cls:'plan',  color:COLORS.gray}
+};
+const $ = id => document.getElementById(id);
+const fmt = n => (n||0).toLocaleString('vi-VN');
+// Tự chọn đơn vị theo độ lớn: nghìn tỷ / tỷ / triệu / đồng
+const fmtTy = n => {
+  if(n==null || isNaN(n)) return '\u2014';
+  const a = Math.abs(n), sg = n<0 ? '\u2212' : '';
+  const d = (v,f)=>v.toLocaleString('vi-VN',{maximumFractionDigits:f});
+  if(a >= 1e12) return sg + d(a/1e12,2) + ' nghìn tỷ';
+  if(a >= 1e9)  return sg + d(a/1e9, a>=1e10?0:2) + ' tỷ';
+  if(a >= 1e6)  return sg + d(a/1e6, a>=1e8?0:1) + ' triệu';
+  if(a >= 1e3)  return sg + d(a,0) + ' đ';
+  return sg + d(a,0) + ' đ';
+};
+const DAY = 86400000;
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ================= Dữ liệu từ hệ thống ================= */
+let DATA_META = { conv:{}, loadedAt:null };
+let appStarted = false;
+const nz = v => (v===null||v===undefined||v==='') ? null : +v;
+
+async function loadData(){
+  SHS.loading(true, 'Đang tải dữ liệu…');
+  try{
+    const d = await SHS.api('data');
+    rows = d.checklist.map(r => {
+      const date = SHS.parseDate(r.date);
+      return {
+        id:r.id, date, week: date ? String(isoWeek(date)) : '', month: date ? String(date.getMonth()+1) : '',
+        cap1:(r.cap1||'').trim(), cap2:(r.cap2||'').trim(), cap3:(r.cap3||'').trim(),
+        group:(r.group||'').trim(), channel:(r.channel||'').trim(), item:(r.item||'').trim(),
+        content:(r.content||'').trim(), pic:(r.pic||'').trim(),
+        qty:nz(r.qty)||0, status:(r.status||'').trim(),
+        views:nz(r.views)||0, eng:nz(r.eng)||0, conv:nz(r.conv)||0,
+        url:(r.url||'').trim(), note:(r.note||'').trim()
+      };
+    });
+    convRows = d.conv.rows.map(c => ({
+      date: SHS.parseDate(c.date), tot:nz(c.tot)||0, mkt:nz(c.mkt)||0, tvdt:nz(c.tvdt)||0, counter:nz(c.counter)||0,
+      act:nz(c.act)||0, paid:nz(c.paid)||0, debt:nz(c.debt), nav:nz(c.nav), navNew:nz(c.navNew),
+      navExist:(nz(c.nav)!==null && nz(c.navNew)!==null) ? c.nav - c.navNew : null,
+      navMkt:nz(c.navMkt), navTvdt:nz(c.navTvdt), navQuay:nz(c.navQuay),
+      paidMkt:nz(c.paidMkt), paidTvdt:nz(c.paidTvdt), paidQuay:nz(c.paidQuay)
+    })).filter(c => c.date).sort((a,b)=>a.date-b.date);
+    hasDebtNav = convRows.some(c => c.debt!==null || c.nav!==null);
+    hasNavNew  = convRows.some(c => c.navNew!==null) && convRows.some(c => c.nav!==null);
+    hasChannelSplit = convRows.some(c => c.navMkt!==null && c.navTvdt!==null) || convRows.some(c => c.paidMkt!==null && c.paidTvdt!==null);
+    DATA_META = { conv: d.conv.meta || {}, loadedAt: new Date() };
+    updateStatus();
+    if(!appStarted){ appStarted = true; enterApp(); } else { buildFilters(); render(); }
+    return true;
+  }catch(e){
+    SHS.toast(e.message, 'err');
+    return false;
+  }finally{ SHS.loading(false); }
+}
+$('btnRefresh').addEventListener('click', async ()=>{ if(await loadData()) SHS.toast('Đã cập nhật dữ liệu mới nhất.', 'ok'); });
+
+function urlLinks(u){
+  const list = String(u||'').split(/[\s]+/).filter(x => /^https?:\/\//i.test(x));
+  return list.map((x,i)=>'<a href="'+esc(x)+'" target="_blank" rel="noopener">Link'+(list.length>1?' '+(i+1):'')+'</a>').join('<br>');
+}
+
+/* ---- Thu gọn / mở từng khối ---- */
+function toggleSec(head, force){
+  const body = $(head.dataset.sec); if(!body) return;
+  const closed = force!==undefined ? force : !head.classList.contains('closed');
+  head.classList.toggle('closed', closed);
+  body.classList.toggle('hide', closed);
+}
+document.querySelectorAll('.sec-head').forEach(h=>{
+  h.addEventListener('click', ()=>toggleSec(h));
+});
+$('secCollapseAll').addEventListener('click', ()=>document.querySelectorAll('.sec-head').forEach(h=>toggleSec(h,true)));
+$('secExpandAll').addEventListener('click', ()=>document.querySelectorAll('.sec-head').forEach(h=>toggleSec(h,false)));
+$('btnInfo').addEventListener('click', ()=>$('infoModal').classList.add('open'));
+$('btnCloseInfo').addEventListener('click', ()=>$('infoModal').classList.remove('open'));
+$('infoModal').addEventListener('click', e=>{ if(e.target.id==='infoModal') $('infoModal').classList.remove('open'); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') $('infoModal').classList.remove('open'); });
+
+function updateStatus(){
+  $('fileStatus').style.display='block';
+  const t = DATA_META.loadedAt ? DATA_META.loadedAt.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}) : '';
+  $('fnCheck').textContent = rows.length + ' dòng · tải lúc ' + t;
+  const m = DATA_META.conv || {};
+  if(convRows.length){
+    const last = convRows[convRows.length-1].date.toLocaleDateString('vi-VN');
+    $('fnConv').textContent = 'đến ' + last + (m.uploadedBy ? ' · up bởi ' + m.uploadedBy : '') + (m.uploadedAt ? ' lúc ' + SHS.fmtDateTimeVN(m.uploadedAt) : '');
+    $('fnConv').title = m.file ? 'File: ' + m.file : '';
+  } else $('fnConv').textContent = 'chưa có dữ liệu';
+  $('convEmpty').style.display = convRows.length ? 'none':'block';
+  $('convKpis').style.display  = convRows.length ? 'block':'none';
+}
+function enterApp(){
+  $('app').style.display='block';
+  buildFilters(); render();
+}
+
+/* ================= Parsing ================= */
+function excelDate(v){
+  if(v instanceof Date) return isNaN(v)?null:v;
+  if(typeof v === 'number' && v > 20000) return new Date(Math.round((v-25569)*86400*1000));
+  if(typeof v === 'string' && v.trim()!==''){
+    const d = new Date(v.trim().replace(' ','T'));
+    if(!isNaN(d)) return d;
+  }
+  return null;
+}
+function dayKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function num(v){ const n = parseFloat(v); return isNaN(n)?0:n; }
+
+/* ================= Filters ================= */
+const FILTERS = [
+  {id:'fCap1',   key:'cap1',   label:'Tất cả Cấp 1'},
+  {id:'fCap2',   key:'cap2',   label:'Tất cả Cấp 2'},
+  {id:'fCap3',   key:'cap3',   label:'Tất cả Cấp 3'},
+  {id:'fChannel',key:'channel',label:'Tất cả kênh'},
+  {id:'fPic',    key:'pic',    label:'Tất cả PIC'},
+  {id:'fStatus', key:'status', label:'Tất cả tình trạng'}
+];
+function dateWindow(){
+  const from = $('fFrom').value ? new Date($('fFrom').value + 'T00:00:00') : null;
+  const to   = $('fTo').value   ? new Date($('fTo').value   + 'T23:59:59') : null;
+  return {from,to};
+}
+function inWin(d, w){
+  if((w.from || w.to) && !d) return false;
+  if(w.from && d < w.from) return false;
+  if(w.to && d > w.to) return false;
+  return true;
+}
+function dateFiltered(){ const w=dateWindow(); return rows.filter(r=>inWin(r.date,w)); }
+function contentMatch(r){ return FILTERS.every(f => !$(f.id).value || r[f.key]===$(f.id).value); }
+function filtered(){ return dateFiltered().filter(contentMatch); }
+function convFiltered(){ const w=dateWindow(); return convRows.filter(r=>inWin(r.date,w)); }
+
+function buildFilters(){
+  const base = dateFiltered();
+  FILTERS.forEach(f=>{
+    const sel = $(f.id); const cur = sel.value;
+    const pool = base.filter(r => FILTERS.every(g => g.id===f.id || !$(g.id).value || r[g.key]===$(g.id).value));
+    let vals = [...new Set(pool.map(r=>r[f.key]).filter(v=>v!==''))];
+    vals.sort((a,b)=>a.localeCompare(b,'vi'));
+    sel.innerHTML = '<option value="">'+f.label+'</option>' + vals.map(v=>'<option>'+esc(v)+'</option>').join('');
+    if(vals.includes(cur)) sel.value = cur;
+    sel.onchange = ()=>{ buildFilters(); render(); };
+  });
+}
+['fFrom','fTo'].forEach(id=>$(id).addEventListener('change', ()=>{ buildFilters(); render(); }));
+$('btnReset').addEventListener('click', ()=>{
+  FILTERS.forEach(f=>$(f.id).value=''); $('fFrom').value=''; $('fTo').value='';
+  buildFilters(); render();
+});
+
+/* ================= So sánh kỳ liền trước ================= */
+function maxDataDate(){
+  let m = null;
+  rows.forEach(r=>{ if(r.date && (!m || r.date>m)) m=r.date; });
+  convRows.forEach(r=>{ if(r.date && (!m || r.date>m)) m=r.date; });
+  return m;
+}
+// Trả về {cur:{from,to}, prev:{from,to}} hoặc null nếu không xác định được
+function comparisonWindows(){
+  const w = dateWindow();
+  let from=w.from, to=w.to;
+  if(!from && !to){
+    const m = maxDataDate();
+    if(!m) return null;
+    to = new Date(m.getFullYear(), m.getMonth(), m.getDate(), 23,59,59);
+    from = new Date(to.getTime() - 29*DAY); from.setHours(0,0,0,0);
+  }
+  if(!from || !to) return null; // chỉ chọn 1 đầu -> không xác định kỳ trước
+  const len = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - len);
+  return {cur:{from,to}, prev:{from:prevFrom,to:prevTo}};
+}
+function sumIn(data, win, getter, extraMatch){
+  let s=0, n=0;
+  data.forEach(r=>{
+    if(!r.date || !inWin(r.date,win)) return;
+    if(extraMatch && !extraMatch(r)) return;
+    s+=getter(r); n++;
+  });
+  return {sum:s, count:n};
+}
+function setDelta(id, curSum, prev){
+  const el = $(id);
+  if(!prev || prev.count===0 || prev.sum===0){
+    el.className='delta na'; el.textContent='N/A';
+    el.title='Kỳ trước không có dữ liệu để so sánh';
+    return;
+  }
+  const pct = (curSum - prev.sum)/prev.sum*100;
+  const s = Math.abs(pct).toFixed(1).replace('.',',')+'%';
+  if(pct>=0){ el.className='delta up'; el.textContent='\u25B2 '+s; }
+  else{ el.className='delta down'; el.textContent='\u25BC '+s; }
+  el.title='So với kỳ liền trước cùng độ dài';
+}
+
+/* ================= Render ================= */
+Chart.defaults.font.family = "'Inter',Arial,sans-serif";
+Chart.defaults.color = '#5A6B8C';
+
+function render(){
+  const data = filtered();
+  $('cntRows').textContent = data.length;
+
+  // ---- KPI dòng 1
+  const qty = data.reduce((s,r)=>s+r.qty,0);
+  const done = data.filter(r=>r.status==='Hoàn thành');
+  const doing = data.filter(r=>r.status==='Đang thực hiện');
+  const plan = data.filter(r=>r.status!=='Hoàn thành' && r.status!=='Đang thực hiện');
+  $('kTotal').textContent = fmt(qty);
+  $('kItems').textContent = data.length + ' đầu việc';
+  $('kDone').textContent = fmt(done.reduce((s,r)=>s+r.qty,0));
+  $('kDonePct').textContent = data.length ? Math.round(done.length/data.length*100)+'% đầu việc' : '';
+  $('kDoing').textContent = fmt(doing.reduce((s,r)=>s+r.qty,0));
+  $('kPlan').textContent = fmt(plan.reduce((s,r)=>s+r.qty,0));
+  const views = data.reduce((s,r)=>s+r.views,0);
+  const eng   = data.reduce((s,r)=>s+r.eng,0);
+  $('kView').textContent = fmt(views);
+  $('kEng').textContent  = fmt(eng);
+
+  // ---- So sánh kỳ (Hiển thị / Tương tác: áp cả bộ lọc nội dung)
+  const cw = comparisonWindows();
+  if(cw){
+    const curV = sumIn(rows, cw.cur, r=>r.views, contentMatch);
+    const prevV= sumIn(rows, cw.prev, r=>r.views, contentMatch);
+    setDelta('dView', curV.sum, prevV);
+    const curE = sumIn(rows, cw.cur, r=>r.eng, contentMatch);
+    const prevE= sumIn(rows, cw.prev, r=>r.eng, contentMatch);
+    setDelta('dEng', curE.sum, prevE);
+  }else{
+    ['dView','dEng'].forEach(id=>{ $(id).className='delta na'; $(id).textContent='N/A'; });
+  }
+
+  // ---- KPI dòng 2: Chuyển đổi
+  const conv = convFiltered();
+  const cTot = conv.reduce((s,r)=>s+r.tot,0);
+  const cMkt = conv.reduce((s,r)=>s+r.mkt,0);
+  const cTvdt= conv.reduce((s,r)=>s+r.tvdt,0);
+  const cPaid= conv.reduce((s,r)=>s+r.paid,0);
+  $('kAcc').textContent=fmt(cTot); $('kAccPaid').textContent=fmt(cPaid);
+  const cAct = conv.reduce((s,r)=>s+r.act,0);
+  $('kAct').textContent = fmt(cAct);
+  if(cw && convRows.length){
+    setDelta('dAcc',    sumIn(convRows,cw.cur,r=>r.tot).sum,  sumIn(convRows,cw.prev,r=>r.tot));
+    setDelta('dAct',    sumIn(convRows,cw.cur,r=>r.act).sum,  sumIn(convRows,cw.prev,r=>r.act));
+    setDelta('dAccPaid',sumIn(convRows,cw.cur,r=>r.paid).sum, sumIn(convRows,cw.prev,r=>r.paid));
+  }else{
+    ['dAcc','dAct','dAccPaid'].forEach(id=>{ $(id).className='delta na'; $(id).textContent='N/A'; });
+  }
+
+  // ---- Dư nợ / NAV: số dư ngày cuối cùng trong kỳ (không cộng dồn)
+  const lastOf = (win, key) => {
+    const list = convRows.filter(r=>inWin(r.date,win) && r[key]!=null);
+    return list.length ? list[list.length-1] : null;
+  };
+  [['debt','kDebt','sDebt','dDebt'],['nav','kNav','sNav','dNav']].forEach(([key,kId,sId,dId])=>{
+    const el = $(dId);
+    if(!hasDebtNav || !convRows.length){
+      $(kId).textContent='\u2014'; $(sId).textContent='';
+      el.className='delta na'; el.textContent='N/A'; return;
+    }
+    const cur = lastOf(cw ? cw.cur : {from:null,to:null}, key);
+    $(kId).textContent = cur ? fmtTy(cur[key]) : '\u2014';
+    $(sId).textContent = cur ? 'tại ' + cur.date.toLocaleDateString('vi-VN') : '';
+    const prev = cw ? lastOf(cw.prev, key) : null;
+    if(!cur || !prev || !prev[key]){
+      el.className='delta na'; el.textContent='N/A'; el.title='Kỳ trước không có dữ liệu để so sánh';
+    }else{
+      const pct = (cur[key]-prev[key])/prev[key]*100;
+      const s = Math.abs(pct).toFixed(1).replace('.',',')+'%';
+      if(pct>=0){ el.className='delta up'; el.textContent='\u25B2 '+s; }
+      else{ el.className='delta down'; el.textContent='\u25BC '+s; }
+      el.title='So với số dư ngày cuối của kỳ liền trước (' + prev.date.toLocaleDateString('vi-VN') + ': ' + fmtTy(prev[key]) + ')';
+    }
+  });
+
+  // ---- NAV KH mới: CỘNG DỒN phát sinh trong kỳ (không phải số dư cuối kỳ)
+  const navNewSum = hasNavNew ? conv.reduce((s,r)=>s+(r.navNew||0),0) : null;
+  (function(){
+    const el=$('dNavNew');
+    if(!hasNavNew || !conv.length){
+      $('kNavNew').textContent='\u2014'; $('sNavNew').textContent='';
+      el.className='delta na'; el.textContent='N/A'; return;
+    }
+    $('kNavNew').textContent = fmtTy(navNewSum);
+    // Cảnh báo ngày giá trị bất thường (>100 lần trung vị)
+    const vals = conv.map(r=>Math.abs(r.navNew||0)).filter(v=>v>0).sort((a,b)=>a-b);
+    const med = vals.length ? vals[Math.floor(vals.length/2)] : 0;
+    const odd = med ? conv.filter(r=>Math.abs(r.navNew||0) > med*100) : [];
+    const lastAll = lastOf(cw ? cw.cur : {from:null,to:null}, 'nav');
+    let sub = 'cộng dồn ' + conv.length + ' ngày';
+    if(lastAll && lastAll.nav) sub += ' \u00b7 ' + (navNewSum/lastAll.nav*100).toFixed(3).replace('.',',') + '% NAV toàn SHS';
+    if(odd.length) sub += ' \u00b7 \u26A0 ' + odd.length + ' ngày giá trị bất thường';
+    $('sNavNew').textContent = sub;
+    if(cw){ setDelta('dNavNew', sumIn(convRows,cw.cur,r=>r.navNew||0).sum, sumIn(convRows,cw.prev,r=>r.navNew||0)); }
+    else { el.className='delta na'; el.textContent='N/A'; }
+  })();
+
+  // ---- NAV bình quân / TK đã nộp tiền (trong kỳ)
+  $('kNavPerAcc').textContent = (hasNavNew && navNewSum!=null && cPaid>0)
+      ? fmtTy(navNewSum/cPaid) : '\u2014';
+
+  // ---- Δ NAV trong kỳ & Δ NAV KH hiện hữu
+  (function(){
+    const kv=$('kNavDelta'), sv=$('sNavDelta');
+    const list = conv.filter(r=>r.nav!=null);
+    if(!hasDebtNav || list.length<2){ kv.textContent='\u2014'; sv.textContent='cần tối thiểu 2 ngày dữ liệu'; return; }
+    const a=list[0], b=list[list.length-1];
+    const dTot = b.nav - a.nav;
+    kv.textContent = (dTot>=0?'+':'') + fmtTy(dTot);
+    kv.style.color = dTot>=0 ? 'var(--green)' : 'var(--red)';
+    sv.textContent = a.date.toLocaleDateString('vi-VN') + ' \u2192 ' + b.date.toLocaleDateString('vi-VN');
+  })();
+
+  drawWeek(data); drawCap1(data); drawGroup(data); drawChannel(data); drawCap3(data);
+  drawFunnel(views, eng, cTot, cMkt, convRows.length>0);
+  drawTrend();
+  drawChannelTable(conv);
+  drawTable(data);
+}
+
+function groupSum(data, key){
+  const m = {};
+  data.forEach(r=>{ const k=r[key]||'(trống)'; m[k]=(m[k]||0)+r.qty; });
+  return m;
+}
+function mkChart(id, cfg){
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart($(id), cfg);
+}
+
+function drawWeek(data){
+  const weeks = [...new Set(data.map(r=>r.week).filter(Boolean))].sort((a,b)=>Number(a)-Number(b));
+  const statuses = ['Hoàn thành','Đang thực hiện','Kế hoạch'];
+  const other = [...new Set(data.map(r=>r.status))].filter(s=>s && !statuses.includes(s));
+  const allSt = statuses.concat(other);
+  const ds = allSt.map((st,i)=>({
+    label:st||'(trống)',
+    data:weeks.map(w=>data.filter(r=>r.week===w && r.status===st).reduce((s,r)=>s+r.qty,0)),
+    backgroundColor:(STATUS_META[st]||{}).color || COLORS.series[(i+3)%8],
+    stack:'s', borderRadius:3
+  }));
+  mkChart('chWeek',{type:'bar',data:{labels:weeks.map(w=>'Tuần '+w),datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}},
+      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{precision:0}}}}});
+}
+function drawCap1(data){
+  const m = groupSum(data,'cap1');
+  const labels = Object.keys(m);
+  mkChart('chCap1',{type:'doughnut',
+    data:{labels,datasets:[{data:labels.map(k=>m[k]),backgroundColor:COLORS.series,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}});
+}
+function hbar(id, m, color){
+  const labels = Object.keys(m).sort((a,b)=>m[b]-m[a]);
+  mkChart(id,{type:'bar',
+    data:{labels,datasets:[{data:labels.map(k=>m[k]),backgroundColor:color,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{precision:0}},y:{grid:{display:false},ticks:{font:{size:10.5},callback:function(v){const l=this.getLabelForValue(v);return l.length>22?l.slice(0,21)+'\u2026':l;}}}}}});
+}
+function drawGroup(data){ hbar('chGroup', groupSum(data,'group'), COLORS.navy); }
+function drawChannel(data){
+  const m = groupSum(data,'channel');
+  hbar('chChannel', Object.fromEntries(Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10)), COLORS.orange);
+}
+function drawCap3(data){
+  const m = groupSum(data,'cap3');
+  delete m['(trống)'];
+  hbar('chCap3', Object.fromEntries(Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10)), COLORS.yellow);
+}
+
+function drawFunnel(views, eng, accTot, accMkt, hasConv){
+  const stages = [
+    {label:'Hiển thị',   val:views, color:'var(--navy)'},
+    {label:'Tương tác',  val:eng,   color:'var(--orange)', rate: views? (eng/views*100) : null, rateLabel:'Tương tác / Hiển thị'},
+    {label:'TK mở mới',  val:hasConv?accTot:null, color:'var(--yellow)', rate:(hasConv&&eng)? (accTot/eng*100):null, rateLabel:'TK mở mới / Tương tác'},
+    {label:'TK mở mới Online', val:hasConv?accMkt:null, color:'var(--green)', rate:(hasConv&&accTot)? (accMkt/accTot*100):null, rateLabel:'Online / TK mở mới'}
+  ];
+  const max = Math.max(views, eng, accTot||0, accMkt||0, 1);
+  $('funnel').innerHTML = stages.map(s=>{
+    if(s.val===null){
+      return '<div class="f-row"><div class="f-label">'+s.label+'</div><div class="f-track" style="color:var(--gray);font-size:12px">Chưa có dữ liệu chuyển đổi</div><div class="f-rate"></div></div>';
+    }
+    const w = Math.max(s.val/max*100, 14);
+    const rate = s.rate==null ? '' : '<b>'+s.rate.toFixed(1).replace('.',',')+'%</b><br>'+s.rateLabel;
+    return '<div class="f-row">'+
+      '<div class="f-label">'+s.label+'</div>'+
+      '<div class="f-track"><div class="f-bar" style="width:'+w+'%;background:'+s.color+'">'+fmt(s.val)+'</div></div>'+
+      '<div class="f-rate">'+rate+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+/* ================= Bảng tách theo kênh ================= */
+function drawChannelTable(conv){
+  const sec = $('secChannel');
+  if(!hasChannelSplit || !conv.length){ sec.style.display='none'; return; }
+  sec.style.display='block';
+
+  const S = k => conv.reduce((s,r)=>s+(r[k]||0),0);
+  const acc = {mkt:S('mkt'), tvdt:S('tvdt'), quay:conv.reduce((s,r)=>s+Math.max(r.tot-r.mkt-r.tvdt,0),0)};
+  acc.tot = acc.mkt+acc.tvdt+acc.quay;
+  const paid = {mkt:S('paidMkt'), tvdt:S('paidTvdt'), quay:S('paidQuay')};
+  paid.tot = conv.reduce((s,r)=>s+(r.paid||0),0);
+  const nav = {mkt:S('navMkt'), tvdt:S('navTvdt'), quay:S('navQuay')};
+  nav.tot = conv.reduce((s,r)=>s+(r.navNew||0),0);
+
+  const pct = (a,b) => b ? (a/b*100).toFixed(1).replace('.',',')+'%' : '\u2014';
+  const avg = (n,c) => c ? fmtTy(n/c) : '\u2014';
+
+  // Kỳ liền trước để so sánh
+  const cw2 = comparisonWindows();
+  let P = null;
+  if(cw2){
+    const pv = convRows.filter(r=>inWin(r.date,cw2.prev));
+    if(pv.length){
+      const PS = k => pv.reduce((s,r)=>s+(r[k]||0),0);
+      P = {acc:{mkt:PS('mkt'),tvdt:PS('tvdt'),quay:pv.reduce((s,r)=>s+Math.max(r.tot-r.mkt-r.tvdt,0),0)},
+           paid:{mkt:PS('paidMkt'),tvdt:PS('paidTvdt'),quay:PS('paidQuay'),tot:PS('paid')},
+           nav:{mkt:PS('navMkt'),tvdt:PS('navTvdt'),quay:PS('navQuay'),tot:PS('navNew')}};
+      P.acc.tot = P.acc.mkt+P.acc.tvdt+P.acc.quay;
+    }
+  }
+  // badge % thay đổi so kỳ trước
+  const cd = (cur, prev) => {
+    if(P===null || prev===null || prev===undefined || !isFinite(prev) || prev===0) return '<span class="cd na">\u2013</span>';
+    const d = (cur-prev)/Math.abs(prev)*100;
+    const s = Math.abs(d).toFixed(1).replace('.',',')+'%';
+    return '<span class="cd '+(d>=0?'up':'down')+'">'+(d>=0?'\u25B2 ':'\u25BC ')+s+'</span>';
+  };
+  const R = (cur,prev,fmtFn) => fmtFn(cur) + cd(cur, P?prev:null);
+  const ratio = (a,b)=> b? a/b*100 : null;
+  const Rr = (ca,cb,pa,pb) => { const c=ratio(ca,cb); const q=P?ratio(pa,pb):null;
+    return (c==null?'\u2014':c.toFixed(1).replace('.',',')+'%') + (c==null||q==null?'<span class="cd na">\u2013</span>':cd(c,q)); };
+  const Ra = (cn,cc,pn,pc) => { const c=cc?cn/cc:null, q=(P&&pc)?pn/pc:null;
+    return (c==null?'\u2014':fmtTy(c)) + (c==null||q==null?'<span class="cd na">\u2013</span>':cd(c,q)); };
+
+  const PA = P?P.acc:{}, PP = P?P.paid:{}, PN = P?P.nav:{};
+  const rows = [
+    ['Tài khoản mở mới', R(acc.mkt,PA.mkt,fmt), R(acc.tvdt,PA.tvdt,fmt), R(acc.quay,PA.quay,fmt), R(acc.tot,PA.tot,fmt), pct(acc.mkt,acc.tot)],
+    ['TK đã nộp tiền',   R(paid.mkt,PP.mkt,fmt), R(paid.tvdt,PP.tvdt,fmt), R(paid.quay,PP.quay,fmt), R(paid.tot,PP.tot,fmt), pct(paid.mkt,paid.tot)],
+    ['Tỷ lệ nộp tiền / mở mới', Rr(paid.mkt,acc.mkt,PP.mkt,PA.mkt), Rr(paid.tvdt,acc.tvdt,PP.tvdt,PA.tvdt), Rr(paid.quay,acc.quay,PP.quay,PA.quay), Rr(paid.tot,acc.tot,PP.tot,PA.tot), '\u2014'],
+    ['NAV KH mới phát sinh', R(nav.mkt,PN.mkt,fmtTy), R(nav.tvdt,PN.tvdt,fmtTy), R(nav.quay,PN.quay,fmtTy), R(nav.tot,PN.tot,fmtTy), pct(nav.mkt,nav.tot)],
+    ['NAV BQ / TK nộp tiền', Ra(nav.mkt,paid.mkt,PN.mkt,PP.mkt), Ra(nav.tvdt,paid.tvdt,PN.tvdt,PP.tvdt), Ra(nav.quay,paid.quay,PN.quay,PP.quay), Ra(nav.tot,paid.tot,PN.tot,PP.tot), '\u2014']
+  ];
+  $('chTbody').innerHTML = rows.map(r=>'<tr><td>'+r[0]+'</td><td class="hl">'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td><td class="hl">'+r[5]+'</td></tr>').join('');
+
+  const d0 = conv[0].date.toLocaleDateString('vi-VN'), d1 = conv[conv.length-1].date.toLocaleDateString('vi-VN');
+  let cmp = 'Không đủ dữ liệu kỳ liền trước để so sánh.';
+  if(P && cw2) cmp = 'Dòng chữ nhỏ dưới mỗi số là mức thay đổi so với kỳ liền trước cùng độ dài ('
+    + cw2.prev.from.toLocaleDateString('vi-VN') + ' \u2192 ' + cw2.prev.to.toLocaleDateString('vi-VN') + ').';
+  $('chNote').innerHTML = 'Cộng dồn ' + conv.length + ' ngày có dữ liệu (' + d0 + ' \u2192 ' + d1 + '), theo khoảng ngày ở bộ lọc chung. ' + cmp + ' '
+    + 'NAV theo kênh là NAV của <b>khách hàng mới</b> mở qua kênh đó, không phải NAV toàn danh mục. '
+    + 'Cột Quầy hiển thị để đối chiếu tổng, không thuộc phạm vi Marketing.';
+}
+
+/* ================= Chart: TK mới từ Online & MKT ================= */
+function drawMktTrend(B){
+  const card = $('mktCard');
+  if(!hasChannelSplit || !B.length){ card.style.display='none'; return; }
+  card.style.display='block';
+
+  const labels = B.map(b=>b.label);
+  const accs   = B.map(b=>b.mkt);
+  const rates  = B.map(b=>b.mkt ? b.paidMkt/b.mkt*100 : null);
+  const navAvgRaw = B.map(b=>b.mkt ? b.navMkt/b.mkt : null);
+  const maxAvg = Math.max(0, ...navAvgRaw.map(v=>Math.abs(v||0)));
+  const dv = maxAvg>=1e9 ? 1e9 : maxAvg>=1e6 ? 1e6 : 1e3;
+  const unit = dv===1e9 ? 'tỷ đ' : dv===1e6 ? 'triệu đ' : 'nghìn đ';
+  const navAvg = navAvgRaw.map(v=>v==null?null:v/dv);
+
+  mkChart('chMkt',{data:{labels,datasets:[
+      {type:'bar', label:'Số TK mở mới Online & MKT', data:accs, backgroundColor:COLORS.orange, borderRadius:3, yAxisID:'y', order:3},
+      {type:'line', label:'Tỷ lệ nộp tiền (%)', data:rates, borderColor:COLORS.navy, backgroundColor:COLORS.navy,
+       pointRadius:2.5, borderWidth:2.5, tension:.25, spanGaps:true, yAxisID:'yR', order:1},
+      {type:'line', label:'NAV mới BQ / TK mới ('+unit+')', data:navAvg, borderColor:COLORS.green, backgroundColor:COLORS.green,
+       pointRadius:2.5, borderWidth:2.2, borderDash:[6,3], tension:.25, spanGaps:true, yAxisID:'yA', order:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
+        tooltip:{callbacks:{
+          label:c=>{
+            const b=B[c.dataIndex];
+            if(c.dataset.yAxisID==='yR') return 'Tỷ lệ nộp tiền: '+(c.parsed.y==null?'\u2014':c.parsed.y.toFixed(1).replace('.',',')+'%')+' ('+fmt(b.paidMkt)+'/'+fmt(b.mkt)+' TK)';
+            if(c.dataset.yAxisID==='yA') return 'NAV mới BQ/TK: '+(b.mkt?fmtTy(b.navMkt/b.mkt):'\u2014');
+            return 'Số TK mở mới Online & MKT: '+fmt(b.mkt);
+          }
+        }}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10},maxRotation:60,autoSkip:true}},
+        y:{position:'left',title:{display:true,text:'Số tài khoản',font:{size:11},color:'#B8420A'},ticks:{precision:0,color:'#B8420A'}},
+        yR:{position:'right',beginAtZero:true,title:{display:true,text:'Tỷ lệ nộp tiền (%)',font:{size:11},color:COLORS.navy},
+            ticks:{color:COLORS.navy,callback:v=>v.toFixed(0)+'%'},grid:{drawOnChartArea:false}},
+        yA:{position:'right',title:{display:true,text:'NAV BQ ('+unit+')',font:{size:11},color:COLORS.green},
+            ticks:{color:COLORS.green,callback:v=>v.toLocaleString('vi-VN',{maximumFractionDigits:1})},grid:{drawOnChartArea:false}}
+      }}});
+
+  const tAcc = B.reduce((s,b)=>s+b.mkt,0), tPaid = B.reduce((s,b)=>s+b.paidMkt,0), tNav = B.reduce((s,b)=>s+b.navMkt,0);
+  $('mktNote').innerHTML = 'Toàn khoảng đang xem: <b>'+fmt(tAcc)+'</b> TK mở mới qua Online &amp; MKT, tỷ lệ nộp tiền <b>'
+    + (tAcc? (tPaid/tAcc*100).toFixed(1).replace('.',',') : '0') + '%</b>, NAV mới bình quân <b>'
+    + (tAcc? fmtTy(tNav/tAcc) : '\u2014') + '</b>/TK mới. NAV bình quân chia cho <u>tổng TK mở mới</u> của kênh (gồm cả TK chưa nộp tiền).';
+}
+
+/* ================= Chart xu hướng chuyển đổi ================= */
+let trendGran = 'day';
+let trendRangeTouched = false;
+let trendQuick = 'def';                 // '7' | '10' | '30' | 'def' | null (tự chọn ngày)
+const trendVisible = {mkt:true, tvdt:true, other:true, navNew:true, navMkt:false, nav:true};
+const TREND_DEFAULT = {day:'30 ngày', week:'12 tuần', month:'12 tháng'};
+const GRAN_NAME = {day:'ngày', week:'tuần', month:'tháng'};
+
+function startOfWeek(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
+function isoWeek(d){ const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const n=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-n); const y=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil(((t-y)/86400000+1)/7); }
+function toInput(d){ return dayKey(d); }
+function bucketStart(d){
+  if(trendGran==='day') return new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  if(trendGran==='week') return startOfWeek(d);
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function trendDefaultRange(){
+  if(!convRows.length) return null;
+  const last = convRows[convRows.length-1].date;
+  const to = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+  let from;
+  if(trendGran==='day'){ from = new Date(to); from.setDate(from.getDate()-29); }
+  else if(trendGran==='week'){ from = startOfWeek(to); from.setDate(from.getDate()-7*11); }
+  else { from = new Date(to.getFullYear(), to.getMonth()-11, 1); }
+  return {from, to};
+}
+// N kỳ gần nhất CÓ DỮ LIỆU (đúng N cột trên chart)
+function trendLastNRange(n){
+  if(!convRows.length) return null;
+  const starts = [...new Set(convRows.map(r=>bucketStart(r.date).getTime()))].sort((a,b)=>a-b);
+  const pick = starts.slice(-n);
+  const last = convRows[convRows.length-1].date;
+  return {from:new Date(pick[0]), to:new Date(last.getFullYear(), last.getMonth(), last.getDate())};
+}
+function applyTrendQuick(){
+  const r = trendQuick==='def' ? trendDefaultRange() : trendLastNRange(parseInt(trendQuick,10));
+  if(!r) return;
+  $('tFrom').value = toInput(r.from); $('tTo').value = toInput(r.to);
+  trendRangeTouched = false;
+}
+function markQuick(){
+  document.querySelectorAll('#trendQuick button').forEach(x=>x.classList.toggle('on', x.dataset.n===trendQuick));
+}
+document.querySelectorAll('#trendSeg button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('#trendSeg button').forEach(x=>x.classList.toggle('on', x===b));
+    trendGran = b.dataset.g;
+    if(!trendQuick) trendQuick = 'def';     // đang tự chọn ngày -> đổi độ chi tiết thì về mặc định
+    markQuick(); applyTrendQuick(); drawTrend();
+  });
+});
+document.querySelectorAll('#trendQuick button').forEach(b=>{
+  b.addEventListener('click', ()=>{ trendQuick = b.dataset.n; markQuick(); applyTrendQuick(); drawTrend(); });
+});
+['tFrom','tTo'].forEach(id=>$(id).addEventListener('change', ()=>{
+  trendRangeTouched = true; trendQuick = null; markQuick(); drawTrend();
+}));
+document.querySelectorAll('#trendSeries input').forEach(cb=>{
+  cb.addEventListener('change', ()=>{ trendVisible[cb.dataset.s] = cb.checked; drawTrend(); });
+});
+$('tsAll').addEventListener('click', ()=>{
+  document.querySelectorAll('#trendSeries input').forEach(cb=>{ cb.checked = true; trendVisible[cb.dataset.s] = true; });
+  drawTrend();
+});
+
+function drawTrend(){
+  const has = convRows.length>0;
+  $('trendEmpty').style.display = has ? 'none':'block';
+  $('chTrend').parentElement.style.display = has ? 'block':'none';
+  if(!has){ $('trendNote').textContent=''; $('mktCard').style.display='none'; return; }
+  $('lblNavMkt').style.display = hasChannelSplit ? 'inline-flex':'none';
+  if(!$('tFrom').value || !$('tTo').value || !trendRangeTouched) applyTrendQuick();
+
+  const from = new Date($('tFrom').value+'T00:00:00');
+  const to   = new Date($('tTo').value+'T23:59:59');
+  const list = convRows.filter(r=>r.date>=from && r.date<=to);
+
+  // Gom theo kỳ
+  const buckets = new Map();
+  list.forEach(r=>{
+    let key, label, sortKey;
+    if(trendGran==='day'){
+      key = dayKey(r.date); sortKey = key;
+      label = String(r.date.getDate()).padStart(2,'0')+'/'+String(r.date.getMonth()+1).padStart(2,'0');
+    }else if(trendGran==='week'){
+      const s = startOfWeek(r.date); key = dayKey(s); sortKey = key;
+      label = 'T'+isoWeek(r.date)+' ('+String(s.getDate()).padStart(2,'0')+'/'+String(s.getMonth()+1).padStart(2,'0')+')';
+    }else{
+      key = r.date.getFullYear()+'-'+String(r.date.getMonth()+1).padStart(2,'0'); sortKey = key;
+      label = String(r.date.getMonth()+1).padStart(2,'0')+'/'+r.date.getFullYear();
+    }
+    if(!buckets.has(key)) buckets.set(key,{sortKey,label,mkt:0,tvdt:0,other:0,tot:0,navNew:0,hasNavNew:false,navMkt:0,hasNavMkt:false,paidMkt:0,hasPaidMkt:false,navLast:null,navDate:null,days:0});
+    const b = buckets.get(key);
+    b.mkt += r.mkt; b.tvdt += r.tvdt; b.tot += r.tot;
+    b.other += Math.max(r.tot - r.mkt - r.tvdt, 0);
+    if(r.navNew!=null){ b.navNew += r.navNew; b.hasNavNew = true; }
+    if(r.navMkt!=null){ b.navMkt = (b.navMkt||0) + r.navMkt; b.hasNavMkt = true; }
+    if(r.paidMkt!=null){ b.paidMkt += r.paidMkt; b.hasPaidMkt = true; }
+    if(r.nav!=null && (!b.navDate || r.date>=b.navDate)){ b.navLast = r.nav; b.navDate = r.date; }
+    b.days++;
+  });
+  const B = [...buckets.values()].sort((a,b)=>a.sortKey<b.sortKey?-1:1);
+  const labels = B.map(b=>b.label);
+
+  // Đơn vị trục NAV KH mới: tự chọn tỷ / triệu theo độ lớn thực tế
+  const maxNew = Math.max(0, ...B.map(b=>Math.abs(b.navNew)), ...B.map(b=>Math.abs(b.navMkt||0)));
+  const newDiv = maxNew>=1e9 ? 1e9 : 1e6, newUnit = maxNew>=1e9 ? 'tỷ đ' : 'triệu đ';
+  const NAVDIV = 1e12;
+
+  const ds = [
+    {sk:'mkt', type:'bar', label:'TK Online & Marketing', data:B.map(b=>b.mkt), backgroundColor:COLORS.orange, stack:'acc', yAxisID:'y', order:3, borderRadius:0},
+    {sk:'tvdt', type:'bar', label:'TK Tư vấn đầu tư', data:B.map(b=>b.tvdt), backgroundColor:COLORS.navy, stack:'acc', yAxisID:'y', order:3},
+    {sk:'other', type:'bar', label:'TK nguồn khác', data:B.map(b=>b.other), backgroundColor:'#C9D3E8', stack:'acc', yAxisID:'y', order:3},
+  ];
+  if(hasNavNew) ds.push({sk:'navNew', type:'line', label:'NAV KH mới phát sinh ('+newUnit+')', data:B.map(b=>b.hasNavNew?b.navNew/newDiv:null),
+      borderColor:'#D99A00', backgroundColor:'#FFB628', pointRadius:3, pointBorderColor:'#D99A00', borderWidth:2.5, tension:.25, spanGaps:true, yAxisID:'yNew', order:1});
+  if(hasChannelSplit) ds.push({sk:'navMkt', type:'line', label:'NAV KH mới \u2014 Online & MKT ('+newUnit+')', data:B.map(b=>b.hasNavMkt?b.navMkt/newDiv:null),
+      borderColor:COLORS.orange, backgroundColor:COLORS.orange, pointRadius:2.5, borderWidth:2, borderDash:[3,3], tension:.25, spanGaps:true, yAxisID:'yNew', order:1});
+  if(hasDebtNav) ds.push({sk:'nav', type:'line', label:'Tổng NAV cuối kỳ (nghìn tỷ đ)', data:B.map(b=>b.navLast!=null?b.navLast/NAVDIV:null),
+      borderColor:COLORS.green, backgroundColor:COLORS.green, pointRadius:2.5, borderWidth:2.5, borderDash:[6,3], tension:.25, spanGaps:true, yAxisID:'yNav', order:2});
+  ds.forEach(d=>{ d.hidden = !trendVisible[d.sk]; });
+  const showY    = trendVisible.mkt || trendVisible.tvdt || trendVisible.other;
+  const showNew  = (hasNavNew && trendVisible.navNew) || (hasChannelSplit && trendVisible.navMkt);
+  const showNav  = hasDebtNav && trendVisible.nav;
+
+  mkChart('chTrend',{data:{labels,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}},
+          onClick:(e,item,legend)=>{
+            const d = legend.chart.data.datasets[item.datasetIndex];
+            trendVisible[d.sk] = !trendVisible[d.sk];
+            const cb = document.querySelector('#trendSeries input[data-s="'+d.sk+'"]'); if(cb) cb.checked = trendVisible[d.sk];
+            drawTrend();
+          }},
+        tooltip:{callbacks:{
+          label:c=>{
+            const b = B[c.dataIndex];
+            if(c.dataset.sk==='navMkt') return 'NAV KH mới \u2014 Online & MKT: '+fmtTy(b.navMkt);
+            if(c.dataset.yAxisID==='yNew') return 'NAV KH mới phát sinh: '+fmtTy(b.navNew);
+            if(c.dataset.yAxisID==='yNav') return 'Tổng NAV cuối kỳ: '+fmtTy(b.navLast)+(b.navDate?' (tại '+b.navDate.toLocaleDateString('vi-VN')+')':'');
+            return c.dataset.label+': '+fmt(c.parsed.y);
+          },
+          footer:items=>{ if(!items.length) return ''; const b=B[items[0].dataIndex]; return 'Tổng TK mở mới: '+fmt(b.tot)+(trendGran!=='day'?' \u00b7 '+b.days+' ngày có dữ liệu':''); }
+        }}
+      },
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{font:{size:10},maxRotation:60,autoSkip:true}},
+        y:{display:showY,stacked:true,position:'left',title:{display:true,text:'Tài khoản mở mới',font:{size:11}},ticks:{precision:0}},
+        yNew:{display:showNew,position:'right',title:{display:true,text:'NAV KH mới ('+newUnit+')',font:{size:11},color:'#B07C00'},
+              ticks:{color:'#B07C00',callback:v=>v.toLocaleString('vi-VN',{maximumFractionDigits:1})},grid:{drawOnChartArea:false}},
+        yNav:{display:showNav,position:'right',beginAtZero:false,title:{display:true,text:'Tổng NAV (nghìn tỷ đ)',font:{size:11},color:COLORS.green},
+              ticks:{color:COLORS.green,callback:v=>v.toLocaleString('vi-VN',{maximumFractionDigits:1})},grid:{drawOnChartArea:false}}
+      }}});
+
+  drawMktTrend(B);
+
+  const first = list.length ? list[0].date.toLocaleDateString('vi-VN') : '';
+  const lastD = list.length ? list[list.length-1].date.toLocaleDateString('vi-VN') : '';
+  $('trendNote').innerHTML = (trendQuick===null ? 'Khoảng tùy chọn' : trendQuick==='def' ? 'Mặc định: '+TREND_DEFAULT[trendGran]+' gần nhất' : trendQuick+' '+GRAN_NAME[trendGran]+' có dữ liệu gần nhất')
+    + (list.length ? ' \u00b7 dữ liệu thực có: '+first+' \u2192 '+lastD : ' \u00b7 không có dữ liệu trong khoảng này')
+    + '. <b>Cột:</b> TK mở mới xếp chồng (Online &amp; MKT dưới cùng). <b>Đường vàng:</b> NAV KH mới phát sinh cộng dồn trong từng kỳ. <b>Đường xanh:</b> Tổng NAV toàn SHS tại ngày cuối của từng kỳ (trục riêng, không bắt đầu từ 0 để thấy xu hướng). Chart có range riêng, không chịu tác động của bộ lọc phía trên.';
+}
+
+/* ---- Sắp xếp bảng chi tiết ---- */
+let sortState = {key:'date', type:'date', dir:1}; // dir 1 = tăng dần (cũ -> mới)
+function sortData(data){
+  const {key,type,dir} = sortState;
+  const arr = data.slice();
+  arr.sort((a,b)=>{
+    let x=a[key], y=b[key];
+    if(type==='date'){
+      x = x? x.getTime():null; y = y? y.getTime():null;
+      if(x===null && y===null) return 0;
+      if(x===null) return 1;   // dòng thiếu ngày luôn xuống cuối
+      if(y===null) return -1;
+      return (x-y)*dir;
+    }
+    if(type==='num'){
+      x = parseFloat(x); y = parseFloat(y);
+      if(isNaN(x)) x = -Infinity; if(isNaN(y)) y = -Infinity;
+      return (x-y)*dir;
+    }
+    x = String(x||''); y = String(y||'');
+    if(x==='' && y==='') return 0;
+    if(x==='') return 1;
+    if(y==='') return -1;
+    return x.localeCompare(y,'vi',{numeric:true,sensitivity:'base'})*dir;
+  });
+  return arr;
+}
+function markSortHeaders(){
+  document.querySelectorAll('#thead th[data-key]').forEach(th=>{
+    const isCur = th.dataset.key===sortState.key;
+    th.classList.toggle('sorted', isCur);
+    const t = th.dataset.type;
+    let arrow = '\u21C5';
+    if(isCur) arrow = sortState.dir===1 ? '\u25B2' : '\u25BC';
+    let old = th.querySelector('.arrow'); if(old) old.remove();
+    const sp = document.createElement('span'); sp.className='arrow'; sp.textContent=arrow;
+    th.appendChild(sp);
+    // tooltip mô tả hướng sắp xếp tiếp theo
+    const nextDir = isCur ? -sortState.dir : (t==='date'?1:1);
+    th.title = t==='date' ? (nextDir===1?'Sắp xếp: ngày cũ nhất \u2192 mới nhất':'Sắp xếp: ngày gần nhất \u2192 cũ nhất')
+             : t==='num'  ? (nextDir===1?'Sắp xếp: nhỏ nhất \u2192 lớn nhất':'Sắp xếp: lớn nhất \u2192 nhỏ nhất')
+             :              (nextDir===1?'Sắp xếp: A \u2192 Z':'Sắp xếp: Z \u2192 A');
+  });
+}
+document.querySelectorAll('#thead th[data-key]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const k = th.dataset.key;
+    if(sortState.key===k) sortState.dir = -sortState.dir;
+    else sortState = {key:k, type:th.dataset.type, dir:1};
+    render();
+  });
+});
+
+function drawTable(data){
+  data = sortData(data);
+  markSortHeaders();
+  $('cntTable').textContent = data.length;
+  $('emptyNote').style.display = data.length ? 'none':'block';
+  $('tbody').innerHTML = data.map(r=>{
+    const meta = STATUS_META[r.status] || {cls:'other'};
+    const d = r.date ? r.date.toLocaleDateString('vi-VN') : '';
+    return '<tr>'+
+      '<td>'+d+'</td><td>'+esc(r.week)+'</td><td>'+esc(r.cap1)+'</td><td>'+esc(r.cap2)+'</td>'+
+      '<td>'+esc(r.cap3)+'</td><td>'+esc(r.group)+'</td><td>'+esc(r.channel)+'</td><td>'+esc(r.item)+'</td>'+
+      '<td>'+esc(r.content)+'</td><td>'+esc(r.pic)+'</td><td>'+fmt(r.qty)+'</td>'+
+      '<td><span class="chip '+meta.cls+'">'+esc(r.status||'\u2014')+'</span></td>'+
+      '<td>'+(r.views?fmt(r.views):'')+'</td><td>'+(r.eng?fmt(r.eng):'')+'</td>'+
+      '<td>'+urlLinks(r.url)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+/* ================= Khởi động ================= */
+(async function(){
+  const user = await SHS.requireLogin({ title:'Marketing Dashboard', lead:'Nhập key truy cập do TT.Marcom cấp để xem Dashboard.' });
+  $('userSlot').appendChild(SHS.userChip(user));
+  if(user.role === 'admin') $('btnCms').style.display = 'inline-block';
+  await loadData();
+})();
+</script>
+</body>
+</html>
