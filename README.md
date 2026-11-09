@@ -69,6 +69,34 @@ Key chỉ hiện một lần khi tạo. Gửi riêng cho từng người qua kê
 
 ---
 
+## Nhập liệu trực tiếp trên Google Sheet (tùy chọn)
+
+Ngoài CMS, Marcomer có thể nhập thẳng trên tab **Checklist** của Google Sheet. Hai đường nhập dùng chung dữ liệu và không ghi đè lên nhau.
+
+**Bật một lần:** mở Google Sheet → menu **SHS Dashboard → Thiết lập nhập liệu trên Sheet**. Lệnh này cài:
+- Dropdown cho Cấp 1, Nhóm kênh, PIC, Tình trạng (lấy từ các tab danh mục).
+- Dropdown phụ thuộc: **Cấp 2, Cấp 3, Kênh, Hạng mục chỉ hiện lựa chọn thuộc cột cha của từng dòng**.
+- Lịch chọn ngày ở cột Ngày đăng (bấm đúp vào ô).
+- Tự điền **ID, Tuần, Tháng, Người tạo/sửa, Sửa lúc** mỗi khi có người nhập hoặc dán dòng.
+- Khóa cảnh báo các cột hệ thống; khóa cứng tab Key, Nhật ký, Meta.
+- Chừa sẵn 500 dòng trống có dropdown.
+
+**Chia sẻ:** chia sẻ Sheet với quyền **Người chỉnh sửa** cho tài khoản Google của từng Marcomer có key Admin. Không bật "Bất kỳ ai có đường liên kết". Người được chia sẻ sẽ thấy cả tab Chuyển đổi (NAV, dư nợ).
+
+**Khác biệt so với nhập trên CMS:**
+
+| | CMS | Google Sheet |
+|---|---|---|
+| Ô sai danh mục | Chặn, không cho lưu | Cảnh báo (tam giác đỏ), không chặn |
+| Xóa dòng | Lưu vào tab **Đã xóa** | Mất luôn, không lưu vết |
+| Tên người nhập | Tên key | Tên tài khoản Google nếu Google cho phép, nếu không thì ghi "Nhập trên Google Sheet" |
+| Đăng 1 nội dung nhiều kênh | Có form riêng | Copy dòng thủ công |
+
+**Lưu ý khi dùng Sheet:**
+- Muốn lọc hay sắp xếp, dùng **Dữ liệu → Tạo chế độ xem bộ lọc** để không làm đảo bảng của người khác.
+- Sau khi sửa danh mục trực tiếp trên Sheet, dropdown tự cập nhật. Nếu thấy chưa khớp, chạy **SHS Dashboard → Cập nhật lại dropdown theo danh mục mới**.
+- Không đổi tên tab hay tên tiêu đề cột. Thêm cột mới ở cuối bảng thì không sao.
+
 ## Vận hành hằng ngày
 
 | Việc | Ai | Ở đâu |
@@ -90,7 +118,7 @@ Key chỉ hiện một lần khi tạo. Gửi riêng cho từng người qua kê
 
 ## Cập nhật code Apps Script về sau
 
-Khi `Code.gs` có bản mới: dán đè code → **Lưu** → **Triển khai → Quản lý các bản triển khai** → biểu tượng bút chì → **Phiên bản: Phiên bản mới** → **Triển khai**.
+Khi `Code.gs` có bản mới: dán đè code → **Lưu** → **Triển khai → Quản lý các bản triển khai** → biểu tượng bút chì → **Phiên bản: Phiên bản mới** → **Triển khai**. Menu và chức năng tự điền trên Sheet nhận code mới ngay khi Lưu; riêng API (Dashboard, CMS) chỉ nhận code mới sau bước Triển khai phiên bản mới.
 
 > ⚠ Không bấm *Tùy chọn triển khai mới*: làm vậy sẽ tạo URL mới, giao diện sẽ mất kết nối.
 

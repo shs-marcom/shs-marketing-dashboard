@@ -352,30 +352,31 @@ function saveChecklist_(s, b) {
   var lock = lock_();
   try {
     var sh = sheet_(SHEETS.checklist, CK_COLS);
-    var rows = readTable_(sh, CK_COLS).map(normalizeCkRow_);
+    migrateCkDates_(sh);
+    var t = readTableRows_(sh, CK_COLS);
     var byId = {};
-    rows.forEach(function (r, i) { byId[r.id] = i; });
+    t.items.forEach(function (it) { it.obj = normalizeCkRow_(it.obj); if (it.obj.id) byId[it.obj.id] = it; });
     var now = nowIso_();
-    var conflicts = [], savedRows = [], removed = [];
+    var conflicts = [], savedRows = [], removed = [], fresh = [];
 
-    // Xóa
+    // Xóa: kiểm tra phiên bản trước
     var delSet = {};
     deletes.forEach(function (d) {
-      var idx = byId[d.id];
-      if (idx === undefined) return; // đã bị người khác xóa
-      if (d.ver && rows[idx].updatedAt && d.ver !== rows[idx].updatedAt) {
-        conflicts.push({ id: d.id, reason: 'Dòng đã được ' + rows[idx].updatedBy + ' sửa lúc ' + rows[idx].updatedAt + ' — chưa xóa.', server: rows[idx] });
+      var it = byId[d.id];
+      if (!it) return; // đã bị người khác xóa
+      if (d.ver && it.obj.updatedAt && d.ver !== it.obj.updatedAt) {
+        conflicts.push({ id: d.id, reason: 'Dòng đã được ' + it.obj.updatedBy + ' sửa lúc ' + it.obj.updatedAt + ' — chưa xóa.', server: it.obj });
         return;
       }
       delSet[d.id] = true;
     });
 
-    // Upsert
+    // Cập nhật / thêm mới
     upserts.forEach(function (u) {
       var clean = cleanCkInput_(u);
-      var idx = (clean.id && byId[clean.id] !== undefined) ? byId[clean.id] : -1;
-      if (idx >= 0) {
-        var cur = rows[idx];
+      var it = clean.id ? byId[clean.id] : null;
+      if (it) {
+        var cur = it.obj;
         if (delSet[cur.id]) return;
         if (u.ver && cur.updatedAt && u.ver !== cur.updatedAt) {
           conflicts.push({ id: cur.id, reason: 'Dòng đã được ' + cur.updatedBy + ' sửa lúc ' + cur.updatedAt + ' — bản của anh/chị chưa được lưu.', server: cur });
@@ -384,6 +385,7 @@ function saveChecklist_(s, b) {
         CK_EDITABLE.forEach(function (k) { cur[k] = clean[k]; });
         cur.week = clean.week; cur.month = clean.month;
         cur.updatedBy = s.name; cur.updatedAt = now;
+        it.dirty = true;
         savedRows.push(cur);
       } else {
         var nr = {};
@@ -392,25 +394,40 @@ function saveChecklist_(s, b) {
         nr.id = clean.id || newId_();
         nr.week = clean.week; nr.month = clean.month;
         nr.createdBy = s.name; nr.createdAt = now; nr.updatedBy = s.name; nr.updatedAt = now;
-        byId[nr.id] = rows.length;
-        rows.push(nr);
+        byId[nr.id] = { obj: nr, isNew: true };
+        fresh.push(nr);
         savedRows.push(nr);
       }
     });
 
-    var keep = [];
-    rows.forEach(function (r) { if (delSet[r.id]) removed.push(r); else keep.push(r); });
-    keep.sort(function (a, b) {
-      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
-      return a.createdAt < b.createdAt ? -1 : (a.createdAt > b.createdAt ? 1 : 0);
+    // 1) Ghi đè đúng các dòng đã sửa — không đảo vị trí dòng, người đang gõ trên Sheet không bị nhảy dòng
+    t.items.forEach(function (it) {
+      if (!it.dirty || delSet[it.obj.id]) return;
+      sh.getRange(it.row, 1, 1, t.width).setValues([ckRowValues_(t, it.vals, it.obj)]);
     });
-    writeTable_(sh, CK_COLS, keep, CK_NUM);
 
+    // 2) Thêm dòng mới xuống cuối bảng
+    if (fresh.length) {
+      var start = sh.getLastRow() + 1;
+      ensureRows_(sh, start + fresh.length - 1);
+      var blank = []; for (var c = 0; c < t.width; c++) blank.push('');
+      var block = fresh.map(function (o) { return ckRowValues_(t, blank, o); });
+      setCkFormats_(sh, t, start, block.length);
+      sh.getRange(start, 1, block.length, t.width).setValues(block);
+      if (readMeta_()['sheet_entry'] === '1') applyCkValidation_(sh, t.map, start, block.length);
+    }
+
+    // 3) Xóa: lưu sang "Đã xóa" rồi xóa đúng các dòng, từ dưới lên
+    var delRows = [];
+    t.items.forEach(function (it) { if (delSet[it.obj.id]) { removed.push(it.obj); delRows.push(it.row); } });
     if (removed.length) {
       var dsh = sheet_(SHEETS.deleted, DELETED_COLS);
-      var old = readTable_(dsh, DELETED_COLS);
-      removed.forEach(function (r) { r.deletedBy = s.name; r.deletedAt = now; old.push(r); });
-      writeTable_(dsh, DELETED_COLS, old, CK_NUM);
+      var drows = removed.map(function (r) {
+        var o = {}; Object.keys(r).forEach(function (k) { o[k] = r[k]; });
+        o.deletedBy = s.name; o.deletedAt = now; return o;
+      });
+      appendTable_(dsh, DELETED_COLS, drows, CK_NUM);
+      delRows.sort(function (a, b2) { return b2 - a; }).forEach(function (r) { sh.deleteRow(r); });
     }
     if (savedRows.length || removed.length) {
       log_(s.name, 'Lưu checklist', savedRows.length + ' dòng lưu, ' + removed.length + ' dòng xóa' +
@@ -418,6 +435,115 @@ function saveChecklist_(s, b) {
     }
     return { ok: true, saved: savedRows.length, deleted: removed.length, conflicts: conflicts, rows: savedRows, serverTime: now };
   } finally { lock.releaseLock(); }
+}
+
+/** Đọc bảng kèm số dòng thực tế trên sheet. Thiếu cột nào thì tự thêm tiêu đề vào cuối. */
+function readTableRows_(sh, cols) {
+  ensureHeaders_(sh, cols);
+  var last = sh.getLastRow(), width = Math.max(sh.getLastColumn(), cols.length);
+  var head = sh.getRange(1, 1, 1, width).getValues()[0].map(function (h) { return String(h).trim(); });
+  var map = {};
+  cols.forEach(function (c) { map[c[0]] = head.indexOf(c[1]); });
+  var items = [];
+  if (last >= 2) {
+    var values = sh.getRange(2, 1, last - 1, width).getValues();
+    values.forEach(function (row, i) {
+      var o = {}, empty = true;
+      cols.forEach(function (c) {
+        var v = map[c[0]] >= 0 ? row[map[c[0]]] : '';
+        if (v !== '' && v !== null) empty = false;
+        o[c[0]] = v;
+      });
+      if (!empty) items.push({ row: i + 2, vals: row, obj: o });
+    });
+  }
+  return { items: items, map: map, width: width };
+}
+
+function ensureHeaders_(sh, cols) {
+  var lastCol = Math.max(sh.getLastColumn(), 1);
+  var head = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h).trim(); });
+  var missing = cols.filter(function (c) { return head.indexOf(c[1]) < 0; });
+  if (!missing.length) return;
+  var startCol = head.join('') ? lastCol + 1 : 1;
+  if (!head.join('')) missing = cols;
+  sh.getRange(1, startCol, 1, missing.length).setValues([missing.map(function (c) { return c[1]; })]);
+}
+
+/** Tạo mảng giá trị cho 1 dòng checklist theo vị trí cột thực tế; giữ nguyên các cột không thuộc hệ thống. */
+function ckRowValues_(t, baseRow, o) {
+  var out = baseRow.slice();
+  while (out.length < t.width) out.push('');
+  CK_COLS.forEach(function (c) {
+    var idx = t.map[c[0]];
+    if (idx < 0) return;
+    var v = o[c[0]];
+    if (c[0] === 'date') out[idx] = v ? toDateObj_(toDateStr_(v)) : '';
+    else if (CK_NUM[c[0]]) out[idx] = (v === null || v === undefined || v === '') ? '' : +v;
+    else out[idx] = (v === null || v === undefined) ? '' : String(v);
+  });
+  return out;
+}
+
+function setCkFormats_(sh, t, startRow, n) {
+  CK_COLS.forEach(function (c) {
+    var idx = t.map[c[0]];
+    if (idx < 0) return;
+    var fmt = c[0] === 'date' ? 'dd/mm/yyyy' : (CK_NUM[c[0]] ? '#,##0' : '@');
+    sh.getRange(startRow, idx + 1, n, 1).setNumberFormat(fmt);
+  });
+}
+
+function toDateObj_(s) {
+  if (!s) return '';
+  var p = s.split('-');
+  return new Date(+p[0], +p[1] - 1, +p[2]);
+}
+
+/** Chuyển cột Ngày đăng từ dạng chữ (file khởi tạo) sang kiểu ngày thật — chạy 1 lần, có cờ trong Meta. */
+function migrateCkDates_(sh) {
+  if (readMeta_()['date_type_v2'] === '1') return;
+  var t = readTableRows_(sh, CK_COLS);
+  var col = t.map.date;
+  if (col >= 0) {
+    var maxR = Math.max(sh.getMaxRows(), 2);
+    sh.getRange(2, col + 1, maxR - 1, 1).setNumberFormat('dd/mm/yyyy');
+    var last = sh.getLastRow();
+    if (last >= 2) {
+      var rng = sh.getRange(2, col + 1, last - 1, 1);
+      var vals = rng.getValues().map(function (r) { var d = toDateStr_(r[0]); return [d ? toDateObj_(d) : r[0]]; });
+      rng.setValues(vals);
+    }
+  }
+  setMeta_('date_type_v2', '1');
+}
+
+/** Bảo đảm sheet có đủ số dòng (Google báo lỗi nếu ghi vượt số dòng hiện có). */
+function ensureRows_(sh, needRow) {
+  var max = sh.getMaxRows();
+  if (needRow > max) sh.insertRowsAfter(max, needRow - max);
+}
+
+/** Thêm các dòng xuống cuối bảng (dùng cho tab Đã xóa). */
+function appendTable_(sh, cols, rows, numCols) {
+  if (!rows.length) return;
+  ensureHeaders_(sh, cols);
+  var width = Math.max(sh.getLastColumn(), cols.length);
+  var head = sh.getRange(1, 1, 1, width).getValues()[0].map(function (h) { return String(h).trim(); });
+  var start = sh.getLastRow() + 1;
+  ensureRows_(sh, start + rows.length - 1);
+  var data = rows.map(function (r) {
+    var out = []; for (var i = 0; i < width; i++) out.push('');
+    cols.forEach(function (c) {
+      var idx = head.indexOf(c[1]); if (idx < 0) return;
+      var v = r[c[0]];
+      if (c[0] === 'date') v = toDateStr_(v);
+      out[idx] = (v === null || v === undefined) ? '' : (numCols[c[0]] ? v : String(v));
+    });
+    return out;
+  });
+  sh.getRange(start, 1, data.length, width).setNumberFormat('@');
+  sh.getRange(start, 1, data.length, width).setValues(data);
 }
 
 function cleanCkInput_(u) {
@@ -475,6 +601,7 @@ function saveCatalog_(s, b) {
     writeTable_(sheet_(SHEETS[kind], cols), cols, rows);
     var ver = nowIso_();
     setMeta_('catalog_ver_' + kind, ver);
+    if (readMeta_()['sheet_entry'] === '1' && kind !== 'pics') { try { capNhatDropdown(true); } catch (err) { } }
     var label = { programs: 'Danh mục chương trình', channels: 'Danh sách kênh', pics: 'PIC' }[kind];
     log_(s.name, 'Lưu danh mục', label + ': ' + rows.length + ' dòng');
     return { ok: true, rows: rows, ver: ver };
@@ -604,6 +731,7 @@ function writeTable_(sh, cols, rows, numCols) {
     });
   });
   var formats = rows.map(function () { return cols.map(function (c) { return numCols[c[0]] ? '#,##0' : '@'; }); });
+  ensureRows_(sh, data.length + 1);
   var range = sh.getRange(2, 1, data.length, head.length);
   range.setNumberFormats(formats);
   range.setValues(data);
@@ -657,6 +785,212 @@ function toNumOrNull_(v) {
 }
 
 /* =========================================================================
+ * Nhập liệu trực tiếp trên Google Sheet
+ *  - Dropdown: Cấp 1, Nhóm kênh, PIC, Tình trạng lấy từ tab danh mục;
+ *    Cấp 2, Cấp 3, Kênh, Hạng mục phụ thuộc cột cha (cập nhật theo từng dòng khi sửa cột cha).
+ *  - Ô sai chỉ hiện cảnh báo (tam giác đỏ), không chặn — để dán nhiều dòng không bị từ chối.
+ *  - onEdit tự điền: ID, Tuần, Tháng, Người tạo/sửa, thời điểm sửa.
+ * ========================================================================= */
+
+var CK_SYS = ['id', 'week', 'month', 'createdBy', 'createdAt', 'updatedBy', 'updatedAt'];
+var DEP = [ // [cột con, các cột cha]
+  ['cap2', ['cap1']], ['cap3', ['cap1', 'cap2']], ['channel', ['group']], ['item', ['group', 'channel']]
+];
+
+/** Menu: chạy 1 lần để bật nhập liệu trên Sheet. Chạy lại không sao. */
+function thietLapNhapLieu() {
+  var ss = ss_();
+  ss.setSpreadsheetTimeZone(TZ);
+  try { ss.setSpreadsheetLocale('vi_VN'); } catch (e) { }
+  var sh = sheet_(SHEETS.checklist, CK_COLS);
+  migrateCkDates_(sh);
+  var t = readTableRows_(sh, CK_COLS);
+  ensureRows_(sh, sh.getLastRow() + 500); // chừa sẵn 500 dòng trống có dropdown
+  var n = sh.getMaxRows() - 1;
+  setCkFormats_(sh, t, 2, n);
+  applyCkValidation_(sh, t.map, 2, n);
+  sh.setFrozenRows(1);
+
+  // Khóa vùng hệ thống
+  removeShsProtections_(sh);
+  CK_SYS.forEach(function (k) {
+    var idx = t.map[k];
+    if (idx < 0) return;
+    var p = sh.getRange(1, idx + 1, sh.getMaxRows(), 1).protect().setDescription('SHS: cột hệ thống tự điền');
+    p.setWarningOnly(true);
+  });
+  [SHEETS.keys, SHEETS.log, SHEETS.meta].forEach(function (name) {
+    var ksh = ss.getSheetByName(name);
+    if (!ksh) return;
+    removeShsProtections_(ksh);
+    var p = ksh.protect().setDescription('SHS: chỉ hệ thống được sửa');
+    try {
+      p.addEditor(Session.getEffectiveUser());
+      p.removeEditors(p.getEditors());
+      if (p.canDomainEdit()) p.setDomainEdit(false);
+    } catch (e) { p.setWarningOnly(true); }
+  });
+  setMeta_('sheet_entry', '1');
+  log_('Google Sheet', 'Thiết lập nhập liệu trên Sheet', (sh.getMaxRows() - 1) + ' dòng có dropdown');
+  try {
+    SpreadsheetApp.getUi().alert('Đã thiết lập xong',
+      'Tab Checklist đã có dropdown (Cấp 2/3, Kênh, Hạng mục lọc theo cột cha), lịch chọn ngày và tự điền ID/Người sửa.\n\n' +
+      'Sau khi sửa danh mục trực tiếp trên Sheet, chạy "Cập nhật lại dropdown theo danh mục mới".',
+      SpreadsheetApp.getUi().ButtonSet.OK);
+  } catch (e) { }
+}
+
+/** Menu: cập nhật dropdown phụ thuộc cho toàn bộ checklist (sau khi đổi danh mục). */
+function capNhatDropdown(silent) {
+  var sh = sheet_(SHEETS.checklist, CK_COLS);
+  var t = readTableRows_(sh, CK_COLS);
+  applyCkValidation_(sh, t.map, 2, Math.max(sh.getMaxRows() - 1, 1));
+  if (silent === true) return;
+  try { SpreadsheetApp.getUi().alert('Đã cập nhật dropdown theo danh mục mới.'); } catch (e) { }
+}
+
+function removeShsProtections_(sh) {
+  [SpreadsheetApp.ProtectionType.RANGE, SpreadsheetApp.ProtectionType.SHEET].forEach(function (type) {
+    sh.getProtections(type).forEach(function (p) {
+      if (String(p.getDescription() || '').indexOf('SHS:') === 0) p.remove();
+    });
+  });
+}
+
+function catalogLists_() {
+  var P = readTable_(sheet_(SHEETS.programs, CATALOG_COLS.programs), CATALOG_COLS.programs);
+  var H = readTable_(sheet_(SHEETS.channels, CATALOG_COLS.channels), CATALOG_COLS.channels);
+  var S = function (v) { return String(v === null || v === undefined ? '' : v).trim(); };
+  P = P.map(function (r) { return { cap1: S(r.cap1), cap2: S(r.cap2), cap3: S(r.cap3) }; });
+  H = H.map(function (r) { return { group: S(r.group), channel: S(r.channel), item: S(r.item) }; });
+  return { P: P, H: H };
+}
+
+function uniqList_(arr) {
+  var seen = {}, out = [];
+  arr.forEach(function (v) { if (v && !seen[v]) { seen[v] = 1; out.push(v); } });
+  return out;
+}
+
+/** Danh sách hợp lệ của cột con theo giá trị cột cha của một dòng. */
+function childOptions_(L, child, row) {
+  var src = (child === 'cap2' || child === 'cap3') ? L.P : L.H;
+  var parents = DEP.filter(function (d) { return d[0] === child; })[0][1];
+  var filtered = src.filter(function (x) {
+    return parents.every(function (p) { return !row[p] || x[p] === row[p]; });
+  });
+  var list = uniqList_(filtered.map(function (x) { return x[child]; }));
+  if (!list.length) list = uniqList_(src.map(function (x) { return x[child]; }));
+  return list;
+}
+
+/** Gắn dropdown cho các dòng [startRow, startRow+n). */
+function applyCkValidation_(sh, map, startRow, n) {
+  if (n <= 0) return;
+  var ss = ss_();
+  var L = catalogLists_();
+  var dv = function () { return SpreadsheetApp.newDataValidation().setAllowInvalid(true); };
+  var help = 'Chọn từ danh sách. Ô có tam giác đỏ là giá trị chưa khớp danh mục.';
+
+  var colRange = function (sheetName, colIdx) {
+    var src = ss.getSheetByName(sheetName);
+    return src.getRange(2, colIdx, Math.max(src.getMaxRows() - 1, 1), 1);
+  };
+  var setCol = function (key, rule) {
+    if (map[key] < 0) return;
+    sh.getRange(startRow, map[key] + 1, n, 1).setDataValidation(rule);
+  };
+  setCol('cap1', dv().requireValueInRange(colRange(SHEETS.programs, 1), true).setHelpText(help).build());
+  setCol('group', dv().requireValueInRange(colRange(SHEETS.channels, 1), true).setHelpText(help).build());
+  setCol('pic', dv().requireValueInRange(colRange(SHEETS.pics, 1), true).setHelpText(help).build());
+  setCol('status', dv().requireValueInList(STATUSES, true).setHelpText('Kế hoạch / Đang thực hiện / Hoàn thành / Hủy').build());
+  setCol('date', dv().requireDate().setHelpText('Nhập ngày dạng dd/mm/yyyy hoặc bấm đúp để chọn trên lịch.').build());
+
+  // Dropdown phụ thuộc: tính theo giá trị cột cha của từng dòng
+  var parentKeys = ['cap1', 'cap2', 'group', 'channel'];
+  var parentVals = {};
+  parentKeys.forEach(function (k) {
+    parentVals[k] = map[k] >= 0 ? sh.getRange(startRow, map[k] + 1, n, 1).getValues().map(function (r) { return String(r[0] || '').trim(); }) : [];
+  });
+  DEP.forEach(function (d) {
+    var child = d[0];
+    if (map[child] < 0) return;
+    var cache = {}, rules = [];
+    for (var i = 0; i < n; i++) {
+      var row = {};
+      d[1].forEach(function (p) { row[p] = parentVals[p][i] || ''; });
+      var key = d[1].map(function (p) { return row[p]; }).join('␟');
+      if (!cache[key]) {
+        var opts = childOptions_(L, child, row);
+        cache[key] = opts.length ? dv().requireValueInList(opts.slice(0, 500), true).setHelpText(help).build() : null;
+      }
+      rules.push([cache[key]]);
+    }
+    sh.getRange(startRow, map[child] + 1, n, 1).setDataValidations(rules);
+  });
+}
+
+/** Trình kích hoạt đơn giản: chạy mỗi khi có người sửa ô trên Sheet. */
+function onEdit(e) {
+  if (!e || !e.range) return;
+  var sh = e.range.getSheet();
+  var name = sh.getName();
+  try {
+    if (name === SHEETS.checklist) onEditChecklist_(e, sh);
+    else if ((name === SHEETS.programs || name === SHEETS.channels) && readMeta_()['sheet_entry'] === '1') capNhatDropdown(true);
+  } catch (err) {
+    console.log('onEdit lỗi: ' + (err && err.message));
+  }
+}
+
+function onEditChecklist_(e, sh) {
+  var r0 = Math.max(e.range.getRow(), 2);
+  var r1 = e.range.getRow() + e.range.getNumRows() - 1;
+  if (r1 < 2) return;
+  if (r1 - r0 > 1000) r1 = r0 + 1000; // giới hạn khi dán khối rất lớn
+  var t = readTableRows_(sh, CK_COLS);
+  var m = t.map;
+  var n = r1 - r0 + 1;
+  var values = sh.getRange(r0, 1, n, t.width).getValues();
+  var who = editorName_(e);
+  var now = nowIso_();
+  var c0 = e.range.getColumn(), c1 = c0 + e.range.getNumColumns() - 1;
+  var touchedParent = ['cap1', 'cap2', 'group', 'channel'].some(function (k) { return m[k] >= 0 && m[k] + 1 >= c0 && m[k] + 1 <= c1; });
+  var touchedOnlySys = (function () {
+    for (var c = c0; c <= c1; c++) { var key = null; CK_COLS.forEach(function (x) { if (m[x[0]] + 1 === c) key = x[0]; }); if (!key || CK_SYS.indexOf(key) < 0) return false; }
+    return true;
+  })();
+  if (touchedOnlySys) return; // người dùng sửa tay cột hệ thống: không ghi đè vòng lặp
+
+  var changed = false;
+  values.forEach(function (row) {
+    var get = function (k) { return m[k] >= 0 ? row[m[k]] : ''; };
+    var set = function (k, v) { if (m[k] >= 0) row[m[k]] = v; };
+    var hasContent = CK_EDITABLE.some(function (k) { var v = get(k); return v !== '' && v !== null; });
+    if (!hasContent) return;
+    if (!String(get('id') || '').trim()) { set('id', newId_()); set('createdBy', who); set('createdAt', now); }
+    var d = toDateStr_(get('date'));
+    if (d) {
+      set('date', toDateObj_(d));
+      var p = d.split('-');
+      set('week', isoWeek_(+p[0], +p[1], +p[2])); set('month', +p[1]);
+    }
+    if (get('qty') === '' || get('qty') === null) set('qty', 1);
+    set('updatedBy', who); set('updatedAt', now);
+    changed = true;
+  });
+  if (changed) sh.getRange(r0, 1, n, t.width).setValues(values);
+  if (touchedParent) applyCkValidation_(sh, m, r0, n);
+}
+
+function editorName_(e) {
+  var email = '';
+  try { email = (e && e.user && e.user.getEmail && e.user.getEmail()) || ''; } catch (x) { }
+  if (!email) { try { email = Session.getActiveUser().getEmail() || ''; } catch (x) { } }
+  return email ? 'Sheet: ' + email.split('@')[0] : 'Nhập trên Google Sheet';
+}
+
+/* =========================================================================
  * Khởi tạo & key Chủ hệ thống
  * Cách dễ nhất: mở Google Sheet → menu "SHS Dashboard" → "Khởi tạo / Lấy key Chủ hệ thống".
  * Hoặc chạy hàm setup() trong trình soạn thảo, đọc key trong "Nhật ký thực thi".
@@ -666,6 +1000,9 @@ function toNumOrNull_(v) {
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('SHS Dashboard')
     .addItem('Khởi tạo / Lấy key Chủ hệ thống', 'menuKeyChu')
+    .addSeparator()
+    .addItem('Thiết lập nhập liệu trên Sheet (dropdown, lịch, khóa cột hệ thống)', 'thietLapNhapLieu')
+    .addItem('Cập nhật lại dropdown theo danh mục mới', 'capNhatDropdown')
     .addToUi();
 }
 
