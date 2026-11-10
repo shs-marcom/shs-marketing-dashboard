@@ -536,7 +536,10 @@
     // kênh: Nhóm kênh → Kênh → Hạng mục
     var checked = {}, urls = {};
     document.querySelectorAll('#mChannels input[type=checkbox]:checked').forEach(function (c) { checked[c.value] = 1; });
-    document.querySelectorAll('#mChannels textarea.ch-url').forEach(function (t) { if (t.value.trim()) urls[t.dataset.key] = t.value; });
+    document.querySelectorAll('#mChannels .ch-entries').forEach(function (box) {
+      var vals = Array.prototype.map.call(box.querySelectorAll('textarea.ch-url'), function (t) { return t.value; });
+      if (vals.length > 1 || (vals[0] || '').trim()) urls[box.dataset.key] = vals;
+    });
     var groups = {};
     STATE.catalog.channels.forEach(function (x) {
       if (!x.group || !x.channel) return;
@@ -550,18 +553,37 @@
           groups[g][c].map(function (it) {
             var val = JSON.stringify([g, c, it]);
             var on = !!checked[val];
-            return '<div class="ch-it' + (on ? ' on' : '') + '"><label><input type="checkbox" value="' + esc(val) + '"' + (on ? ' checked' : '') + '>' + esc(it || '(không có hạng mục)') + '</label>' +
-              '<textarea class="ch-url" rows="1" data-key="' + esc(val) + '" placeholder="Dán link (không bắt buộc)">' + esc(urls[val] || '') + '</textarea></div>';
+            var entries = urls[val] || [''];
+            return '<div class="ch-it' + (on ? ' on' : '') + '"><label><input type="checkbox" value="' + esc(val) + '"' + (on ? ' checked' : '') + '>' +
+              '<span>' + esc(it || '(không có hạng mục)') + '</span><b class="ch-n"></b></label>' +
+              '<div class="ch-entries" data-key="' + esc(val) + '">' + entries.map(entryHtml).join('') + '</div>' +
+              '<button type="button" class="ch-add">+ Thêm bài</button></div>';
           }).join('') + '</div>';
       }).join('') + '</div>';
     }).join('');
     $('mChannels').querySelectorAll('input[type=checkbox]').forEach(function (c) {
       c.onchange = function () { c.closest('.ch-it').classList.toggle('on', c.checked); updateMultiCount(); };
     });
-    $('mChannels').querySelectorAll('textarea.ch-url').forEach(function (t) {
-      var fit = function () { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 140) + 'px'; };
-      t.addEventListener('input', fit); setTimeout(fit, 0);
-    });
+    // thêm / bỏ bài trong một hạng mục
+    $('mChannels').onclick = function (e) {
+      var add = e.target.closest('.ch-add'), del = e.target.closest('.ch-del');
+      if (add) {
+        var box = add.closest('.ch-it').querySelector('.ch-entries');
+        box.insertAdjacentHTML('beforeend', entryHtml(''));
+        renumber(box);
+        var ta = box.querySelectorAll('textarea.ch-url'); ta[ta.length - 1].focus();
+        updateMultiCount();
+      } else if (del) {
+        var b2 = del.closest('.ch-entries');
+        if (b2.children.length > 1) del.closest('.ch-entry').remove();
+        else { var t0 = b2.querySelector('textarea'); t0.value = ''; fitArea(t0); }
+        renumber(b2);
+        updateMultiCount();
+      }
+    };
+    $('mChannels').oninput = function (e) { if (e.target.matches('textarea.ch-url')) fitArea(e.target); };
+    $('mChannels').querySelectorAll('.ch-entries').forEach(renumber);
+    setTimeout(function () { $('mChannels').querySelectorAll('textarea.ch-url').forEach(fitArea); }, 0);
     $('mChannels').querySelectorAll('[data-all]').forEach(function (b) {
       b.onclick = function () {
         var boxes = b.closest('.ch-chan').querySelectorAll('input[type=checkbox]');
@@ -573,6 +595,19 @@
     updateMultiCount();
   }
 
+  function entryHtml(v) {
+    return '<div class="ch-entry"><span class="no"></span><textarea class="ch-url" rows="1" placeholder="Link bài (không bắt buộc)">' + esc(v || '') +
+      '</textarea><button type="button" class="ch-del" title="Bỏ bài này" aria-label="Bỏ bài này">&times;</button></div>';
+  }
+  function renumber(box) {
+    var list = box.querySelectorAll('.ch-entry');
+    list.forEach(function (en, i) { en.querySelector('.no').textContent = list.length > 1 ? (i + 1) + '.' : ''; });
+    box.classList.toggle('multi', list.length > 1);
+    var n = box.closest('.ch-it').querySelector('.ch-n');
+    n.textContent = list.length > 1 ? '× ' + list.length + ' bài' : '';
+  }
+  function fitArea(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 140) + 'px'; }
+
   function refreshMultiCaps() {
     var cap1 = $('mCap1').value;
     fillSelect($('mCap2'), validChildren('cap2', { cap1: cap1 }), true, cap1 ? '— Chọn —' : '— Chọn Cấp 1 trước —');
@@ -580,7 +615,10 @@
   }
 
   function updateMultiCount() {
-    var n = document.querySelectorAll('#mChannels input[type=checkbox]:checked').length;
+    var n = 0;
+    document.querySelectorAll('#mChannels input[type=checkbox]:checked').forEach(function (c) {
+      n += c.closest('.ch-it').querySelectorAll('.ch-entry').length;
+    });
     $('mCount').textContent = n;
     $('mSubmit').disabled = !n;
     $('mSubmit').textContent = n ? 'Tạo ' + n + ' dòng & lưu' : 'Tạo dòng & lưu';
@@ -603,18 +641,21 @@
     var splitUrls = function (txt) { return String(txt || '').split(/[\s,;]+/).map(function (x) { return x.trim(); }).filter(Boolean); };
     var commonUrls = splitUrls($('mUrl').value);
     var badUrl = [];
-    var picks = Array.prototype.map.call(document.querySelectorAll('#mChannels input[type=checkbox]:checked'), function (c) {
+    var picks = [];
+    document.querySelectorAll('#mChannels input[type=checkbox]:checked').forEach(function (c) {
       var p = JSON.parse(c.value);
-      var own = splitUrls(c.closest('.ch-it').querySelector('textarea.ch-url').value);
-      var list = own.length ? own : commonUrls;
-      list.forEach(function (u) { if (!/^https?:\/\/\S+\.\S+/i.test(u)) badUrl.push((p[2] || p[1]) + ': ' + u); });
-      return { p: p, url: list.join('\n'), n: list.length };
+      c.closest('.ch-it').querySelectorAll('textarea.ch-url').forEach(function (t) {   // mỗi bài = 1 dòng checklist
+        var own = splitUrls(t.value);
+        var list = own.length ? own : commonUrls;
+        list.forEach(function (u) { if (!/^https?:\/\/\S+\.\S+/i.test(u)) badUrl.push((p[2] || p[1]) + ': ' + u); });
+        picks.push({ p: p, url: list.join('\n'), n: list.length });
+      });
     });
     if (badUrl.length) { S.toast('Link chưa đúng định dạng (cần bắt đầu bằng http:// hoặc https://): ' + badUrl.slice(0, 3).join(' · '), 'err', 8000); return; }
     var rows = picks.map(function (x) { return Object.assign({}, base, { id: newId(), group: x.p[0], channel: x.p[1], item: x.p[2], url: x.url }); });
     var withLink = picks.filter(function (x) { return x.n; }).length;
     if (!(await S.confirm('Tạo ' + rows.length + ' dòng', 'Nội dung "<b>' + esc(base.content.slice(0, 120)) + '</b>" sẽ được tạo thành <b>' + rows.length +
-      '</b> dòng checklist (mỗi hạng mục một dòng) và lưu ngay lên hệ thống. ' + withLink + '/' + rows.length + ' dòng có link.', 'Tạo & lưu'))) return;
+      '</b> dòng checklist (mỗi bài một dòng) và lưu ngay lên hệ thống. ' + withLink + '/' + rows.length + ' dòng có link.', 'Tạo & lưu'))) return;
     S.loading(true, 'Đang lưu ' + rows.length + ' dòng…');
     try {
       var r = await S.api('saveChecklist', { upserts: rows, deletes: [] });
@@ -627,7 +668,9 @@
       S.toast('Đã tạo ' + r.saved + ' dòng. Xem ở tab Checklist.', 'ok');
       $('mContent').value = ''; $('mUrl').value = ''; $('mNote').value = '';
       document.querySelectorAll('#mChannels input[type=checkbox]').forEach(function (c) { c.checked = false; c.closest('.ch-it').classList.remove('on'); });
-      document.querySelectorAll('#mChannels textarea.ch-url').forEach(function (t) { t.value = ''; t.style.height = ''; });
+      document.querySelectorAll('#mChannels .ch-entries').forEach(function (box) {
+        box.innerHTML = entryHtml(''); renumber(box);
+      });
       updateMultiCount();
       scheduleDirty();
     } catch (e) { S.toast(e.message, 'err'); } finally { S.loading(false); }

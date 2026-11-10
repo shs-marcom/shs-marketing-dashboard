@@ -92,11 +92,21 @@ section.pane.on{display:block}
 .ch-chan .cn button{border:0;background:none;color:var(--orange);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:0}
 .ch-chan label{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 0;cursor:pointer;color:#3A4660}
 .ch-chan input{accent-color:var(--orange);width:15px;height:15px}
-.ch-it textarea.ch-url{display:none;width:100%;box-sizing:border-box;margin:2px 0 6px 22px;width:calc(100% - 22px);font-family:inherit;font-size:12px;
-  padding:6px 8px;border:1.5px solid var(--line);border-radius:7px;resize:vertical;min-height:30px;line-height:1.45;color:var(--ink)}
-.ch-it textarea.ch-url:focus{outline:none;border-color:var(--orange)}
-.ch-it.on textarea.ch-url{display:block}
+.ch-entries,.ch-add{display:none}
+.ch-it.on .ch-entries{display:block;margin:2px 0 2px 22px}
+.ch-it.on .ch-add{display:inline-block;margin:0 0 8px 22px;border:1px dashed #F7B48C;background:#FFF7F1;color:var(--orange);font-family:inherit;font-size:11.5px;font-weight:700;
+  padding:4px 10px;border-radius:7px;cursor:pointer}
+.ch-it.on .ch-add:hover{background:#FFEDE0}
+.ch-entry{display:flex;align-items:flex-start;gap:6px;margin-bottom:5px}
+.ch-entry .no{min-width:0;font-size:11px;font-weight:700;color:var(--gray);padding-top:8px}
+.ch-entries.multi .ch-entry .no{min-width:16px}
+.ch-entry textarea.ch-url{flex:1;min-width:0;box-sizing:border-box;font-family:inherit;font-size:12px;padding:6px 8px;border:1.5px solid var(--line);border-radius:7px;
+  resize:vertical;min-height:30px;line-height:1.45;color:var(--ink)}
+.ch-entry textarea.ch-url:focus{outline:none;border-color:var(--orange)}
+.ch-entry .ch-del{border:0;background:none;color:var(--gray);font-size:17px;line-height:1;padding:5px 4px;cursor:pointer;border-radius:6px}
+.ch-entry .ch-del:hover{color:var(--red);background:#FBEAEA}
 .ch-it.on > label{color:var(--navy);font-weight:600}
+.ch-it .ch-n{margin-left:auto;font-size:11px;color:var(--orange);font-weight:700;white-space:nowrap}
 .form-foot{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
 .form-foot .count{font-size:13px;color:var(--gray)}
 .form-foot .count b{color:var(--orange);font-size:16px}
@@ -194,14 +204,14 @@ table.tbl tr:hover td{background:#FAFBFD}
         <div class="f w4"><label>Nội dung / Thông điệp <i>*</i></label><textarea id="mContent" placeholder="Tiêu đề hoặc thông điệp chính của bài"></textarea></div>
         <div class="f"><label>PIC <i>*</i></label><select id="mPic"></select></div>
         <div class="f"><label>Tình trạng <i>*</i></label><select id="mStatus"></select></div>
-        <div class="f"><label>SL bài tin / mỗi hạng mục</label><input type="number" id="mQty" min="1" value="1"></div>
+        <div class="f"><label>SL bài tin / mỗi dòng</label><input type="number" id="mQty" min="1" value="1"></div>
         <div class="f"><label>URL chung (nếu có)</label><input type="text" id="mUrl" placeholder="Dùng cho hạng mục chưa có link riêng"></div>
         <div class="f w4"><label>Ghi chú</label><input type="text" id="mNote"></div>
       </div>
     </div>
     <div class="card">
       <h3>2. Chọn các kênh / hạng mục đăng</h3>
-      <p class="hint">Tích chọn hạng mục để hiện ô <b>Link</b> riêng (không bắt buộc). Một hạng mục có nhiều link (VD: Bài PR — mỗi báo 1 link): dán mỗi link một dòng. Hạng mục để trống link sẽ dùng <b>URL chung</b> ở phần 1.</p>
+      <p class="hint">Tích chọn hạng mục để hiện ô <b>Link</b> (không bắt buộc). Một hạng mục đăng nhiều bài (VD: PR lên nhiều báo, nhiều group social): bấm <b>+ Thêm bài</b> — <b>mỗi bài thành một dòng checklist</b> để theo dõi hiển thị/tương tác riêng. Bài để trống link sẽ dùng <b>URL chung</b> ở phần 1.</p>
       <div class="ch-groups" id="mChannels"></div>
       <div class="form-foot">
         <button class="ui-btn save" id="mSubmit" disabled>Tạo dòng &amp; lưu</button>
