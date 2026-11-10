@@ -537,8 +537,8 @@
     var checked = {}, urls = {};
     document.querySelectorAll('#mChannels input[type=checkbox]:checked').forEach(function (c) { checked[c.value] = 1; });
     document.querySelectorAll('#mChannels .ch-entries').forEach(function (box) {
-      var vals = Array.prototype.map.call(box.querySelectorAll('textarea.ch-url'), function (t) { return t.value; });
-      if (vals.length > 1 || (vals[0] || '').trim()) urls[box.dataset.key] = vals;
+      var vals = Array.prototype.map.call(box.querySelectorAll('.ch-entry'), readEntry);
+      if (vals.length > 1 || vals.some(function (v) { return v.url.trim() || v.views || v.eng || v.conv; })) urls[box.dataset.key] = vals;
     });
     var groups = {};
     STATE.catalog.channels.forEach(function (x) {
@@ -553,7 +553,7 @@
           groups[g][c].map(function (it) {
             var val = JSON.stringify([g, c, it]);
             var on = !!checked[val];
-            var entries = urls[val] || [''];
+            var entries = urls[val] || [{}];
             return '<div class="ch-it' + (on ? ' on' : '') + '"><label><input type="checkbox" value="' + esc(val) + '"' + (on ? ' checked' : '') + '>' +
               '<span>' + esc(it || '(không có hạng mục)') + '</span><b class="ch-n"></b></label>' +
               '<div class="ch-entries" data-key="' + esc(val) + '">' + entries.map(entryHtml).join('') + '</div>' +
@@ -569,14 +569,14 @@
       var add = e.target.closest('.ch-add'), del = e.target.closest('.ch-del');
       if (add) {
         var box = add.closest('.ch-it').querySelector('.ch-entries');
-        box.insertAdjacentHTML('beforeend', entryHtml(''));
+        box.insertAdjacentHTML('beforeend', entryHtml({}));
         renumber(box);
         var ta = box.querySelectorAll('textarea.ch-url'); ta[ta.length - 1].focus();
         updateMultiCount();
       } else if (del) {
         var b2 = del.closest('.ch-entries');
         if (b2.children.length > 1) del.closest('.ch-entry').remove();
-        else { var t0 = b2.querySelector('textarea'); t0.value = ''; fitArea(t0); }
+        else { var e0 = b2.querySelector('.ch-entry'); e0.outerHTML = entryHtml({}); }
         renumber(b2);
         updateMultiCount();
       }
@@ -596,8 +596,18 @@
   }
 
   function entryHtml(v) {
-    return '<div class="ch-entry"><span class="no"></span><textarea class="ch-url" rows="1" placeholder="Link bài (không bắt buộc)">' + esc(v || '') +
-      '</textarea><button type="button" class="ch-del" title="Bỏ bài này" aria-label="Bỏ bài này">&times;</button></div>';
+    v = v || {};
+    var num = function (cls, label) {
+      return '<label class="m"><span>' + label + '</span><input type="text" inputmode="numeric" class="' + cls + '" value="' + esc(v[cls] || '') + '" placeholder="—"></label>';
+    };
+    return '<div class="ch-entry"><span class="no"></span><div class="ch-body">' +
+      '<textarea class="ch-url" rows="1" placeholder="Link bài (không bắt buộc)">' + esc(v.url || '') + '</textarea>' +
+      '<div class="ch-metrics">' + num('views', 'Hiển thị') + num('eng', 'Tương tác') + num('conv', 'Chuyển đổi') + '</div>' +
+      '</div><button type="button" class="ch-del" title="Bỏ bài này" aria-label="Bỏ bài này">&times;</button></div>';
+  }
+  function readEntry(en) {
+    return { url: en.querySelector('textarea.ch-url').value, views: en.querySelector('input.views').value,
+      eng: en.querySelector('input.eng').value, conv: en.querySelector('input.conv').value };
   }
   function renumber(box) {
     var list = box.querySelectorAll('.ch-entry');
@@ -640,19 +650,31 @@
     if (miss.length) { S.toast('Vui lòng nhập: ' + miss.join(', ') + '.', 'err'); return; }
     var splitUrls = function (txt) { return String(txt || '').split(/[\s,;]+/).map(function (x) { return x.trim(); }).filter(Boolean); };
     var commonUrls = splitUrls($('mUrl').value);
-    var badUrl = [];
+    var badUrl = [], badNum = [];
     var picks = [];
     document.querySelectorAll('#mChannels input[type=checkbox]:checked').forEach(function (c) {
       var p = JSON.parse(c.value);
-      c.closest('.ch-it').querySelectorAll('textarea.ch-url').forEach(function (t) {   // mỗi bài = 1 dòng checklist
-        var own = splitUrls(t.value);
+      c.closest('.ch-it').querySelectorAll('.ch-entry').forEach(function (en, idx) {   // mỗi bài = 1 dòng checklist
+        var v = readEntry(en);
+        var own = splitUrls(v.url);
         var list = own.length ? own : commonUrls;
-        list.forEach(function (u) { if (!/^https?:\/\/\S+\.\S+/i.test(u)) badUrl.push((p[2] || p[1]) + ': ' + u); });
-        picks.push({ p: p, url: list.join('\n'), n: list.length });
+        var label = (p[2] || p[1]) + (idx ? ' (bài ' + (idx + 1) + ')' : '');
+        list.forEach(function (u) { if (!/^https?:\/\/\S+\.\S+/i.test(u)) badUrl.push(label + ': ' + u); });
+        var m = {};
+        ['views', 'eng', 'conv'].forEach(function (k) {
+          var raw = String(v[k] || '').trim();
+          var n = raw === '' ? null : S.toNum(raw);
+          if (raw !== '' && (n === null || n < 0 || n !== Math.round(n))) badNum.push(label + ': ' + LABEL[k] + ' "' + raw + '"');
+          m[k] = n;
+        });
+        picks.push({ p: p, url: list.join('\n'), n: list.length, m: m });
       });
     });
     if (badUrl.length) { S.toast('Link chưa đúng định dạng (cần bắt đầu bằng http:// hoặc https://): ' + badUrl.slice(0, 3).join(' · '), 'err', 8000); return; }
-    var rows = picks.map(function (x) { return Object.assign({}, base, { id: newId(), group: x.p[0], channel: x.p[1], item: x.p[2], url: x.url }); });
+    if (badNum.length) { S.toast('Chỉ số phải là số nguyên không âm: ' + badNum.slice(0, 3).join(' · '), 'err', 8000); return; }
+    var rows = picks.map(function (x) {
+      return Object.assign({}, base, { id: newId(), group: x.p[0], channel: x.p[1], item: x.p[2], url: x.url, views: x.m.views, eng: x.m.eng, conv: x.m.conv });
+    });
     var withLink = picks.filter(function (x) { return x.n; }).length;
     if (!(await S.confirm('Tạo ' + rows.length + ' dòng', 'Nội dung "<b>' + esc(base.content.slice(0, 120)) + '</b>" sẽ được tạo thành <b>' + rows.length +
       '</b> dòng checklist (mỗi bài một dòng) và lưu ngay lên hệ thống. ' + withLink + '/' + rows.length + ' dòng có link.', 'Tạo & lưu'))) return;
@@ -669,7 +691,7 @@
       $('mContent').value = ''; $('mUrl').value = ''; $('mNote').value = '';
       document.querySelectorAll('#mChannels input[type=checkbox]').forEach(function (c) { c.checked = false; c.closest('.ch-it').classList.remove('on'); });
       document.querySelectorAll('#mChannels .ch-entries').forEach(function (box) {
-        box.innerHTML = entryHtml(''); renumber(box);
+        box.innerHTML = entryHtml({}); renumber(box);
       });
       updateMultiCount();
       scheduleDirty();

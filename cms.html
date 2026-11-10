@@ -84,7 +84,7 @@ section.pane.on{display:block}
 .form-grid textarea{min-height:64px;resize:vertical}
 .form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus{outline:none;border-color:var(--navy)}
 @media(max-width:900px){.form-grid{grid-template-columns:1fr 1fr}.form-grid .f.w4{grid-column:span 2}}
-.ch-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.ch-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .ch-group{border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .ch-group > .gh{background:var(--navy-soft);padding:8px 12px;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
 .ch-chan{padding:8px 12px;border-top:1px solid var(--line)}
@@ -100,7 +100,13 @@ section.pane.on{display:block}
 .ch-entry{display:flex;align-items:flex-start;gap:6px;margin-bottom:5px}
 .ch-entry .no{min-width:0;font-size:11px;font-weight:700;color:var(--gray);padding-top:8px}
 .ch-entries.multi .ch-entry .no{min-width:16px}
-.ch-entry textarea.ch-url{flex:1;min-width:0;box-sizing:border-box;font-family:inherit;font-size:12px;padding:6px 8px;border:1.5px solid var(--line);border-radius:7px;
+.ch-entry .ch-body{flex:1;min-width:0}
+.ch-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px}
+.ch-metrics label.m{display:flex;flex-direction:column;gap:1px;padding:0;cursor:default}
+.ch-metrics label.m span{font-size:10px;font-weight:600;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-metrics input{width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:4px 6px;border:1.5px solid var(--line);border-radius:6px;text-align:right;color:var(--ink);height:auto!important}
+.ch-metrics input:focus{outline:none;border-color:var(--orange)}
+.ch-entry textarea.ch-url{width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:6px 8px;border:1.5px solid var(--line);border-radius:7px;
   resize:vertical;min-height:30px;line-height:1.45;color:var(--ink)}
 .ch-entry textarea.ch-url:focus{outline:none;border-color:var(--orange)}
 .ch-entry .ch-del{border:0;background:none;color:var(--gray);font-size:17px;line-height:1;padding:5px 4px;cursor:pointer;border-radius:6px}
@@ -211,7 +217,7 @@ table.tbl tr:hover td{background:#FAFBFD}
     </div>
     <div class="card">
       <h3>2. Chọn các kênh / hạng mục đăng</h3>
-      <p class="hint">Tích chọn hạng mục để hiện ô <b>Link</b> (không bắt buộc). Một hạng mục đăng nhiều bài (VD: PR lên nhiều báo, nhiều group social): bấm <b>+ Thêm bài</b> — <b>mỗi bài thành một dòng checklist</b> để theo dõi hiển thị/tương tác riêng. Bài để trống link sẽ dùng <b>URL chung</b> ở phần 1.</p>
+      <p class="hint">Tích chọn hạng mục để hiện ô <b>Link</b> (không bắt buộc). Một hạng mục đăng nhiều bài (VD: PR lên nhiều báo, nhiều group social): bấm <b>+ Thêm bài</b> — <b>mỗi bài thành một dòng checklist</b>. Mỗi bài nhập được <b>Hiển thị, Tương tác, Chuyển đổi</b> (không bắt buộc, cập nhật sau ở tab Checklist cũng được). Bài để trống link sẽ dùng <b>URL chung</b> ở phần 1.</p>
       <div class="ch-groups" id="mChannels"></div>
       <div class="form-foot">
         <button class="ui-btn save" id="mSubmit" disabled>Tạo dòng &amp; lưu</button>
