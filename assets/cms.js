@@ -521,7 +521,7 @@
   function initMulti() {
     $('mDate').value = todayStr();
     ['mCap1', 'mCap2'].forEach(function (id) { $(id).addEventListener('change', refreshMultiCaps); });
-    $('mClearCh').onclick = function () { document.querySelectorAll('#mChannels input').forEach(function (c) { c.checked = false; }); updateMultiCount(); };
+    $('mClearCh').onclick = function () { document.querySelectorAll('#mChannels input[type=checkbox]').forEach(function (c) { c.checked = false; c.closest('.ch-it').classList.remove('on'); }); updateMultiCount(); };
     $('mSubmit').onclick = submitMulti;
     refreshMultiOptions();
   }
@@ -534,8 +534,9 @@
     fillSelect($('mStatus'), L.status, true);
     if (!$('mStatus').value) $('mStatus').value = 'Kế hoạch';
     // kênh: Nhóm kênh → Kênh → Hạng mục
-    var checked = {};
-    document.querySelectorAll('#mChannels input:checked').forEach(function (c) { checked[c.value] = 1; });
+    var checked = {}, urls = {};
+    document.querySelectorAll('#mChannels input[type=checkbox]:checked').forEach(function (c) { checked[c.value] = 1; });
+    document.querySelectorAll('#mChannels textarea.ch-url').forEach(function (t) { if (t.value.trim()) urls[t.dataset.key] = t.value; });
     var groups = {};
     STATE.catalog.channels.forEach(function (x) {
       if (!x.group || !x.channel) return;
@@ -548,16 +549,24 @@
         return '<div class="ch-chan"><div class="cn">' + esc(c) + '<button type="button" data-all>Chọn tất cả</button></div>' +
           groups[g][c].map(function (it) {
             var val = JSON.stringify([g, c, it]);
-            return '<label><input type="checkbox" value="' + esc(val) + '"' + (checked[val] ? ' checked' : '') + '>' + esc(it || '(không có hạng mục)') + '</label>';
+            var on = !!checked[val];
+            return '<div class="ch-it' + (on ? ' on' : '') + '"><label><input type="checkbox" value="' + esc(val) + '"' + (on ? ' checked' : '') + '>' + esc(it || '(không có hạng mục)') + '</label>' +
+              '<textarea class="ch-url" rows="1" data-key="' + esc(val) + '" placeholder="Dán link (không bắt buộc)">' + esc(urls[val] || '') + '</textarea></div>';
           }).join('') + '</div>';
       }).join('') + '</div>';
     }).join('');
-    $('mChannels').querySelectorAll('input').forEach(function (c) { c.onchange = updateMultiCount; });
+    $('mChannels').querySelectorAll('input[type=checkbox]').forEach(function (c) {
+      c.onchange = function () { c.closest('.ch-it').classList.toggle('on', c.checked); updateMultiCount(); };
+    });
+    $('mChannels').querySelectorAll('textarea.ch-url').forEach(function (t) {
+      var fit = function () { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 140) + 'px'; };
+      t.addEventListener('input', fit); setTimeout(fit, 0);
+    });
     $('mChannels').querySelectorAll('[data-all]').forEach(function (b) {
       b.onclick = function () {
-        var boxes = b.closest('.ch-chan').querySelectorAll('input');
+        var boxes = b.closest('.ch-chan').querySelectorAll('input[type=checkbox]');
         var all = Array.prototype.every.call(boxes, function (x) { return x.checked; });
-        boxes.forEach(function (x) { x.checked = !all; });
+        boxes.forEach(function (x) { x.checked = !all; x.closest('.ch-it').classList.toggle('on', x.checked); });
         updateMultiCount();
       };
     });
@@ -571,7 +580,7 @@
   }
 
   function updateMultiCount() {
-    var n = document.querySelectorAll('#mChannels input:checked').length;
+    var n = document.querySelectorAll('#mChannels input[type=checkbox]:checked').length;
     $('mCount').textContent = n;
     $('mSubmit').disabled = !n;
     $('mSubmit').textContent = n ? 'Tạo ' + n + ' dòng & lưu' : 'Tạo dòng & lưu';
@@ -581,7 +590,7 @@
     var base = {
       date: S.toDateStr($('mDate').value), cap1: $('mCap1').value, cap2: $('mCap2').value, cap3: $('mCap3').value,
       content: $('mContent').value.replace(/[ \t]+/g, ' ').trim(), pic: $('mPic').value, status: $('mStatus').value,
-      qty: Math.max(1, parseInt($('mQty').value, 10) || 1), url: $('mUrl').value.trim(), note: $('mNote').value.trim(),
+      qty: Math.max(1, parseInt($('mQty').value, 10) || 1), url: '', note: $('mNote').value.trim(),
       views: null, eng: null, conv: null
     };
     var miss = [];
@@ -591,10 +600,21 @@
     if (!base.pic) miss.push('PIC');
     if (!base.status) miss.push('Tình trạng');
     if (miss.length) { S.toast('Vui lòng nhập: ' + miss.join(', ') + '.', 'err'); return; }
-    var picks = Array.prototype.map.call(document.querySelectorAll('#mChannels input:checked'), function (c) { return JSON.parse(c.value); });
-    var rows = picks.map(function (p) { return Object.assign({}, base, { id: newId(), group: p[0], channel: p[1], item: p[2] }); });
+    var splitUrls = function (txt) { return String(txt || '').split(/[\s,;]+/).map(function (x) { return x.trim(); }).filter(Boolean); };
+    var commonUrls = splitUrls($('mUrl').value);
+    var badUrl = [];
+    var picks = Array.prototype.map.call(document.querySelectorAll('#mChannels input[type=checkbox]:checked'), function (c) {
+      var p = JSON.parse(c.value);
+      var own = splitUrls(c.closest('.ch-it').querySelector('textarea.ch-url').value);
+      var list = own.length ? own : commonUrls;
+      list.forEach(function (u) { if (!/^https?:\/\/\S+\.\S+/i.test(u)) badUrl.push((p[2] || p[1]) + ': ' + u); });
+      return { p: p, url: list.join('\n'), n: list.length };
+    });
+    if (badUrl.length) { S.toast('Link chưa đúng định dạng (cần bắt đầu bằng http:// hoặc https://): ' + badUrl.slice(0, 3).join(' · '), 'err', 8000); return; }
+    var rows = picks.map(function (x) { return Object.assign({}, base, { id: newId(), group: x.p[0], channel: x.p[1], item: x.p[2], url: x.url }); });
+    var withLink = picks.filter(function (x) { return x.n; }).length;
     if (!(await S.confirm('Tạo ' + rows.length + ' dòng', 'Nội dung "<b>' + esc(base.content.slice(0, 120)) + '</b>" sẽ được tạo thành <b>' + rows.length +
-      '</b> dòng checklist (mỗi hạng mục một dòng) và lưu ngay lên hệ thống.', 'Tạo & lưu'))) return;
+      '</b> dòng checklist (mỗi hạng mục một dòng) và lưu ngay lên hệ thống. ' + withLink + '/' + rows.length + ' dòng có link.', 'Tạo & lưu'))) return;
     S.loading(true, 'Đang lưu ' + rows.length + ' dòng…');
     try {
       var r = await S.api('saveChecklist', { upserts: rows, deletes: [] });
@@ -606,7 +626,8 @@
       });
       S.toast('Đã tạo ' + r.saved + ' dòng. Xem ở tab Checklist.', 'ok');
       $('mContent').value = ''; $('mUrl').value = ''; $('mNote').value = '';
-      document.querySelectorAll('#mChannels input').forEach(function (c) { c.checked = false; });
+      document.querySelectorAll('#mChannels input[type=checkbox]').forEach(function (c) { c.checked = false; c.closest('.ch-it').classList.remove('on'); });
+      document.querySelectorAll('#mChannels textarea.ch-url').forEach(function (t) { t.value = ''; t.style.height = ''; });
       updateMultiCount();
       scheduleDirty();
     } catch (e) { S.toast(e.message, 'err'); } finally { S.loading(false); }
